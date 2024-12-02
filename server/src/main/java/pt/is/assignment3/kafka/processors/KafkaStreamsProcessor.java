@@ -9,7 +9,6 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.state.Stores;
 
@@ -31,16 +30,16 @@ public class KafkaStreamsProcessor {
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         
         // Initialize Serde for Route and Trip
-        // KafkaJSONSerde<Route> routeSerde = new KafkaJSONSerde<>(Route.class);
+        KafkaJSONSerde<Route> routeSerde = new KafkaJSONSerde<>(Route.class);
         KafkaJSONSerde<Trip> tripSerde = new KafkaJSONSerde<>(Trip.class);
 
         StreamsBuilder builder = new StreamsBuilder();
-        // KStream<String, Route> routeStream = builder.stream(routesTopic, Consumed.with(Serdes.String(), routeSerde));
+        KStream<String, Route> routeStream = builder.stream(routesTopic, Consumed.with(Serdes.String(), routeSerde));
         KStream<String, Trip> tripStream = builder.stream(tripsTopic, Consumed.with(Serdes.String(), tripSerde));
 
          //4 Calculate passengers per route: count the number of trips for each routeId
         KStream<String, Long> passengersPerRoute = tripStream
-            .groupBy((key, trip) -> trip.getRouteId()+"")
+            .groupByKey() // just need to group by key since the key of the trip is the routeId
             .count(Materialized.as(Stores.inMemoryKeyValueStore("passengers-per-route")))
             .toStream();
         
