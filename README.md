@@ -19,6 +19,14 @@
 - If it is the first time or changes were made to the code, it will be necessary to compile: ```mvn compile```.
 - To run the intended Java file, follow this example changing after "assignment3 word to whatever package desired": ```mvn exec:java -Dexec.mainClass="pt.is.assignment3.kafka.producers.RoutesProducer"```
 
+### Testing
+- To check the output of a topic (example)run:```kafka-console-consumer.sh --bootstrap-server broker1:9092 \                              
+    --topic resultstopic \
+    --property print.key=true \
+    --property print.value=true \
+    --property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer \
+    --property value.deserializer=org.apache.kafka.common.serialization.LongDeserializer```
+- To descibe a topic run: ```kafka-topics.sh --describe --bootstrap-server broker1:9092 --topic resultstopic``` 
 ## Recommended VSCode Extensions
 
 - **[Extension Pack for Java](https://marketplace.visualstudio.com/items?itemName=vscjava.vscode-java-pack)**  
