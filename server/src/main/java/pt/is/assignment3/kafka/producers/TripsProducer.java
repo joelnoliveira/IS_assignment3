@@ -68,7 +68,7 @@ public class TripsProducer {
 
             Trip trip = tripGenerator(topicId++);
 
-            ProducerRecord<String, Trip> record = new ProducerRecord<>(outputTopic, trip.getRouteId()+"", trip);// define the key as the routeId, because it seamed the more appropriate
+            ProducerRecord<String, Trip> record = new ProducerRecord<>(outputTopic, trip.getPassengerId()+"", trip);// define the key as the routeId, because it seamed the more appropriate
             producer.send(record); 
 
             //give feedback
