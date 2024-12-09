@@ -5,11 +5,11 @@ services:
     ports:
       - 5432:5432
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: My01pass
-      POSTGRES_DB: project3
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - ../sql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      - ./server/src/main/resources/schema/migrations:/docker-entrypoint-initdb.d/ # Mount the migrations directory into the container, so that the database is initialized with the schema and the seed data
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.1
@@ -102,14 +102,20 @@ services:
 
   server:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ./server
+      dockerfile: ../Dockerfile
     command: tail -f /dev/null
+    ports:
+      - 8080:8080
     links:
       - database
       - broker1
       - broker2
       - broker3
       - zookeeper
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ./server:/workspace
