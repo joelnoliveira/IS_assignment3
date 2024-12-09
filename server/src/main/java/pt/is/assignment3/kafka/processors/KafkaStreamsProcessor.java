@@ -49,12 +49,14 @@ public class KafkaStreamsProcessor {
 
         // //4 Calculate passengers per route: count the number of trips for each routeId
         // KTable<String, Long> passengersPerRoute = tripStream
-        //     .groupByKey()
-        //     .count();
+        // .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), // Agrupar por routeId
+        //     Grouped.with(Serdes.String(), tripSerde)) // Configurar os Serdes
+        // .count(); // Contar os passageiros por routeId
+
          
-        //     passengersPerRoute.toStream()
-        //         .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
-        //         .to(outtopicname, Produced.with(Serdes.String(), Serdes.Long()));
+        // passengersPerRoute.toStream()
+        //     .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
+        //     .to(outtopicname, Produced.with(Serdes.String(), Serdes.Long()));
 
         // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota)
         // KTable<String, Integer> capacityPerRoute = routeStream
