@@ -1,0 +1,18 @@
+{
+    "name": "jdbc-postgressql-sink",
+    "config": {
+        "connection.url": "jdbc:postgresql://database:5432/project3?user=postgres&password=My01pass",
+        "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
+        "dialect.name": "PostgreSqlDatabaseDialect",
+        "tasks.max": "1",
+        "topics": "projeto3_ex4",
+        "auto.create": "true",
+        "insert.mode": "upsert",
+        "pk.mode": "record_value",
+        "pk.fields": "id",
+        "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "key.converter.schemas.enable": "true",
+        "value.converter.schemas.enable": "true"
+    }
+}
