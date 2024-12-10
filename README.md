@@ -14,18 +14,24 @@
 - To access the server container: ```docker compose exec server /bin/zsh```.
 <!-- - To access the client container: ```docker compose exec client /bin/zsh```. -->
 
-### Run the Code
+### REST Server
+- From the server container workspace run: ```mvn spring-boot:run```.
 
+### Kafka-Connect
+- If it is the first time, perform the following commands inside the container workspace: ```cd src/main/resources/kafka-connect/config```, ```chmod +x create_connectors.sh```, ```./create_connectors.sh```.
+- To consume the dbinfo topics (the source ones): ```kafka-console-consumer.sh --bootstrap-server broker1:9092 --topic dbinforoute_capacity --from-beginning```, ```kafka-console-consumer.sh --bootstrap-server broker1:9092 --topic dbinforoute_supplier --from-beginning```.
+
+### Run the Code
 - If it is the first time or changes were made to the code, it will be necessary to compile: ```mvn compile```.
 - To run the intended Java file, follow this example changing after "assignment3 word to whatever package desired": ```mvn exec:java -Dexec.mainClass="pt.is.assignment3.kafka.producers.RoutesProducer"```
 
 ### Testing
-- To check the output of a topic (example)run:```kafka-console-consumer.sh --bootstrap-server broker1:9092 \                              
-    --topic resultstopic \
-    --property print.key=true \
-    --property print.value=true \
-    --property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer \
-    --property value.deserializer=org.apache.kafka.common.serialization.LongDeserializer```
+- To check the output of a topic (example)run:```kafka-console-consumer.sh --bootstrap-server broker1:9092 \
+--topic resultstopic \
+--property print.key=true \
+--property print.value=true \
+--property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer \
+--property value.deserializer=org.apache.kafka.common.serialization.LongDeserializer```
 - To descibe a topic run: ```kafka-topics.sh --describe --bootstrap-server broker1:9092 --topic resultstopic``` 
 ## Recommended VSCode Extensions
 

@@ -5,7 +5,7 @@
         "connector.class": "io.confluent.connect.jdbc.JdbcSinkConnector",
         "dialect.name": "PostgreSqlDatabaseDialect",
         "tasks.max": "1",
-        "topics": "projeto3_ex4",
+        "topics": "project3todbreq01,project3todbreq02,project3todbreq03,project3todbreq04,project3todbreq05,project3todbreq06,project3todbreq07,project3todbreq08,project3todbreq09,project3todbreq10,project3todbreq11,project3todbreq12,project3todbreq13,project3todbreq14,project3todbreq15,project3todbreq16",
         "auto.create": "true",
         "insert.mode": "upsert",
         "pk.mode": "record_value",

@@ -1,15 +1,16 @@
 {
 
-    "name": "jdbc-source-suppliers-example",
+    "name": "jdbc-postgressql-source-suppliers",
    "config": {
         "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
         "connection.url": "jdbc:postgresql://database:5432/project3",
         "connection.user": "postgres",
         "connection.password": "My01pass",
         "dialect.name": "PostgreSqlDatabaseDialect",
-        "mode": "bulk",
-        "query": "SELECT * FROM suppliers;",
+        "mode": "incrementing",
+        "incrementing.column.name": "id",
+        "table.whitelist": "route_supplier",
         "poll.interval.ms": "60000",
-        "topic.prefix": "project3fromDB"
+        "topic.prefix": "dbinfo"
     }
 }

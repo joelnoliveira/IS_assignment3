@@ -97,8 +97,8 @@ services:
       - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
       - CONNECT_PLUGIN_PATH=/usr/share/java,/etc/kafka-connect/jars
     volumes:
-      - ./server/src/main/resources/kafka/config:/config
-      - ./server/src/main/resources/kafka/lib:/etc/kafka-connect/jars
+      - ./server/src/main/resources/kafka-connect/config:/config
+      - ./server/src/main/resources/kafka-connect/lib:/etc/kafka-connect/jars
 
   server:
     build:
