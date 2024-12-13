@@ -30,7 +30,7 @@ public class KafkaStreamsProcessor {
     public static void main(String[] args) throws InterruptedException, IOException {
         String routesTopic = "routes";
         String tripsTopic = "trips";
-        String outtopicname = "resultstopic";
+        String [] requirementsTopics = {"project3todbreq01","project3todbreq02","project3todbreq03","project3todbreq04","project3todbreq05","project3todbreq06","project3todbreq07","project3todbreq08","project3todbreq09","project3todbreq10","project3todbreq11","project3todbreq12","project3todbreq13","project3todbreq14","project3todbreq15","project3todbreq16"};
       
         java.util.Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-streams-app");
@@ -57,6 +57,15 @@ public class KafkaStreamsProcessor {
         // passengersPerRoute.toStream()
         //     .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
         //     .to(outtopicname, Produced.with(Serdes.String(), Serdes.Long()));
+
+        // 4. Calculate passengers per route: count the number of trips for each routeId
+        KTable<String, Long> passengersPerRoute = tripStream
+            .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
+            .count();
+
+        passengersPerRoute.toStream()
+            .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
+            .to(requirementsTopics[3], Produced.with(Serdes.String(), Serdes.Long()));
 
         // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota)
         // KTable<String, Integer> capacityPerRoute = routeStream

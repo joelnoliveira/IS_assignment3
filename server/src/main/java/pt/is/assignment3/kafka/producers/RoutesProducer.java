@@ -61,7 +61,7 @@ public class RoutesProducer {
 
     // TODO do constant version for teacher scnerio testing
     public static void main(String[] args) throws Exception {
-        Long routeId = 1L;
+        Long routeId = 0L;
         String outputTopic = "routes";
         
         Properties props = new Properties();
@@ -97,7 +97,7 @@ public class RoutesProducer {
 
             Route route = routeGenerator(routeId++); // generate a new route
             
-            ProducerRecord<String, Route> record = new ProducerRecord<>(outputTopic, route.getId()+"",route); // defined OperatorId as key because it seemed the most appropriate
+            ProducerRecord<String, Route> record = new ProducerRecord<>(outputTopic, route.getOperatorId()+"",route); // defined OperatorId as key because it seemed the most appropriate
             producer.send(record);
 
             // give feedback
