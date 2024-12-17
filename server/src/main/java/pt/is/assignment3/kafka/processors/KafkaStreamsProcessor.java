@@ -22,10 +22,8 @@ import org.apache.kafka.streams.state.Stores;
 import org.apache.logging.log4j.core.appender.routing.Routes;
 import org.apache.kafka.streams.KeyValue;
 
+import pt.is.assignment3.entity.*;
 
-
-import pt.is.assignment3.entity.Route;
-import pt.is.assignment3.entity.Trip;
 import pt.is.assignment3.kafka.utils.KafkaJSONSerde;
 import java.time.Duration;
 
@@ -34,7 +32,7 @@ public class KafkaStreamsProcessor {
     public static void main(String[] args) throws InterruptedException, IOException {
         String routesTopic = "routes";
         String tripsTopic = "trips";
-        String [] requirementsTopics = {"project3todbreq01","project3todbreq02","project3todbreq03","project3todbreq04","project3todbreq05","project3todbreq06","project3todbreq07","project3todbreq08","project3todbreq09","project3todbreq10","project3todbreq11","project3todbreq12","project3todbreq13","project3todbreq14","project3todbreq15","project3todbreq16"};
+        String [] requirementsTopics = {"results_req01","results_req02","results_req03","results_req04","results_req05","results_req06","results_req07","results_req08","results_req09","results_req10","results_req11","results_req12","results_req13","results_req14","results_req15","results_req16"};
       
         java.util.Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-streams-app");
@@ -72,13 +70,14 @@ public class KafkaStreamsProcessor {
             .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), tripSerde));
 
         // 4. Calculate passengers per route: count the number of trips for each routeId
-        // KTable<String, Long> passengersPerRoute = tripStream
-        //     .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
-        //     .count();
+        KTable<String, Long> passengersPerRoute = tripStream
+            .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
+            .count();
 
-        // passengersPerRoute.toStream()
-        //     .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
-        //     .to(requirementsTopics[3], Produced.with(Serdes.String(), Serdes.Long()));
+        passengersPerRoute.toStream()
+            .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
+            .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
+            .to(requirementsTopics[3]);
 
         // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota)
         // KTable<String, Integer> capacityPerRoute = routeStream
@@ -152,40 +151,40 @@ public class KafkaStreamsProcessor {
     
     //10. Get	the	average	number	of	passengers	per	transport	type
     // Criar uma tabela associando cada routeId ao tipo de transporte
-    KTable<String, String> routeTransportTypeTable = routeStream
-        .selectKey((key, route) -> String.valueOf(route.getId())) // Usa o routeId como chave
-        .mapValues(Route::getTransportType) // Extrai o tipo de transporte
-        .toTable(Materialized.with(Serdes.String(), Serdes.String())); // Converte para KTable
+    // KTable<String, String> routeTransportTypeTable = routeStream
+    //     .selectKey((key, route) -> String.valueOf(route.getId())) // Usa o routeId como chave
+    //     .mapValues(Route::getTransportType) // Extrai o tipo de transporte
+    //     .toTable(Materialized.with(Serdes.String(), Serdes.String())); // Converte para KTable
 
     // Contar o número de passageiros por tipo de transporte
-    KTable<String, Long> passengersPerTransportType = tripStream
-        .selectKey((key, trip) -> String.valueOf(trip.getRouteId())) // Usa o routeId como chave
-        .join(routeTransportTypeTable,
-            (trip, transportType) -> transportType, // Junta trips com o tipo de transporte
-            Joined.with(Serdes.String(), tripSerde, Serdes.String())) // Define os Serdes
-        .groupBy((routeId, transportType) -> transportType, // Agrupa por tipo de transporte
-            Grouped.with(Serdes.String(), Serdes.String())) // Define os Serdes
-        .count(); // Conta o número de passageiros por tipo de transporte
+    // KTable<String, Long> passengersPerTransportType = tripStream
+    //     .selectKey((key, trip) -> String.valueOf(trip.getRouteId())) // Usa o routeId como chave
+    //     .join(routeTransportTypeTable,
+    //         (trip, transportType) -> transportType, // Junta trips com o tipo de transporte
+    //         Joined.with(Serdes.String(), tripSerde, Serdes.String())) // Define os Serdes
+    //     .groupBy((routeId, transportType) -> transportType, // Agrupa por tipo de transporte
+    //         Grouped.with(Serdes.String(), Serdes.String())) // Define os Serdes
+    //     .count(); // Conta o número de passageiros por tipo de transporte
 
     // Contar o número de rotas por tipo de transporte
-    KTable<String, Long> routesPerTransportType = routeStream
-        .selectKey((key, route) -> route.getTransportType()) // Usa o tipo de transporte como chave
-        .groupBy((transportType, route) -> transportType, Grouped.with(Serdes.String(), routeSerde))
-        .count();
+    // KTable<String, Long> routesPerTransportType = routeStream
+    //     .selectKey((key, route) -> route.getTransportType()) // Usa o tipo de transporte como chave
+    //     .groupBy((transportType, route) -> transportType, Grouped.with(Serdes.String(), routeSerde))
+    //     .count();
 
     // Calcular a média de passageiros por tipo de transporte
-    KTable<String, Double> avgPassengersPerTransportType = passengersPerTransportType
-        .join(routesPerTransportType, (passengers, routes) -> {
-            if (routes == 0) {
-                return 0.0; // Evita divisão por zero
-            }
-            return (double) passengers / routes; // Calcula a média
-        });
+    // KTable<String, Double> avgPassengersPerTransportType = passengersPerTransportType
+    //     .join(routesPerTransportType, (passengers, routes) -> {
+    //         if (routes == 0) {
+    //             return 0.0; // Evita divisão por zero
+    //         }
+    //         return (double) passengers / routes; // Calcula a média
+    //     });
 
     // Enviar a média de passageiros por tipo de transporte para um tópico
-    avgPassengersPerTransportType.toStream()
-        .peek((key, value) -> System.out.println("Average Passengers per Transport Type: " + key + " -> " + value))
-        .to(requirementsTopics[9], Produced.with(Serdes.String(), Serdes.Double()));
+    // avgPassengersPerTransportType.toStream()
+    //     .peek((key, value) -> System.out.println("Average Passengers per Transport Type: " + key + " -> " + value))
+    //     .to(requirementsTopics[9], Produced.with(Serdes.String(), Serdes.Double()));
 
     //11. Get	the	transport	type	with	the	highest	number	of	served	passengers	(only one if	there	is	a	tie)
     // 1. Criar uma tabela associando cada routeId ao tipo de transporte
