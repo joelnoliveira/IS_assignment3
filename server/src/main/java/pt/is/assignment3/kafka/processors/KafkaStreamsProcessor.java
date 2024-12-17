@@ -79,29 +79,39 @@ public class KafkaStreamsProcessor {
             .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
             .to(requirementsTopics[3]);
 
-        // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota)
-        // KTable<String, Integer> capacityPerRoute = routeStream
-        //     .toTable()
-        //     .mapValues(Route::getCapacity);
+        // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota) dar group by routeid
+        KTable<String, Integer> capacityPerRoute = routeStream
+            .groupBy((key, value) -> String.valueOf(value.getId()), Grouped.with(Serdes.String(), routeSerde))
+          // ...existing code...
+            .aggregate(
+                () -> 0,
+                (routeId, route, capacity) -> route.getCapacity(),
+                Materialized.<String, Integer, KeyValueStore<Bytes, byte[]>>as("capacity-per-route")
+                    .withKeySerde(Serdes.String())
+                    .withValueSerde(Serdes.Integer())
+            );
 
-        // capacityPerRoute.toStream()
-        //     .peek((k, v) -> System.out.println("Capacity per route: " + k + " -> " + v))
-        //     .to(requirementsTopics[4], Produced.with(Serdes.String(), Serdes.Integer()));
+
+
+
+        capacityPerRoute.toStream()
+            .peek((k, v) -> System.out.println("Capacity per route: " + k + " -> " + v))
+            .to(requirementsTopics[4], Produced.with(Serdes.String(), Serdes.Integer()));
 
 
         // //6 Calculate passengers per capacity: divide the number of passengers by the total capacity for each route
-        //  // Taxa de ocupação por rota
-        //  KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
-        //  .join(capacityPerRoute, 
-        //      (passengers, capacity) -> (capacity != null && capacity > 0) 
-        //          ? (double) passengers / capacity 
-        //          : 0.0
-        //  );
+         // Taxa de ocupação por rota
+         KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
+         .join(capacityPerRoute, 
+             (passengers, capacity) -> (capacity != null && capacity > 0) 
+                 ? (double) passengers / capacity 
+                 : 0.0
+         );
 
-        // // Logar a taxa de ocupação para debug
-        // occupancyRatePerRoute.toStream()
-        //     .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
-        //     .to(requirementsTopics[5], Produced.with(Serdes.String(), Serdes.Double()));
+        // Logar a taxa de ocupação para debug
+        occupancyRatePerRoute.toStream()
+            .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
+            .to(requirementsTopics[5], Produced.with(Serdes.String(), Serdes.Double()));
     
 
     //     //7 Get total passengers(from trips)
@@ -187,13 +197,13 @@ public class KafkaStreamsProcessor {
     //     .to(requirementsTopics[9], Produced.with(Serdes.String(), Serdes.Double()));
 
     //11. Get	the	transport	type	with	the	highest	number	of	served	passengers	(only one if	there	is	a	tie)
-    // 1. Criar uma tabela associando cada routeId ao tipo de transporte
+    // Criar uma tabela associando cada routeId ao tipo de transporte
     // KTable<String, String> routeTransportTypeTable = routeStream
     // .selectKey((key, route) -> String.valueOf(route.getId())) // Usa o routeId como chave
     // .mapValues(Route::getTransportType) // Extrai o tipo de transporte
     // .toTable(Materialized.with(Serdes.String(), Serdes.String())); // Converte para KTable
 
-    // // 2. Contar o número de passageiros por tipo de transporte
+    // //  Contar o número de passageiros por tipo de transporte
     // KTable<String, Long> passengersPerTransportType = tripStream
     // .selectKey((key, trip) -> String.valueOf(trip.getRouteId())) // Usa o routeId como chave
     // .join(routeTransportTypeTable,
@@ -203,7 +213,7 @@ public class KafkaStreamsProcessor {
     //     Grouped.with(Serdes.String(), Serdes.String())) // Define os Serdes
     // .count(); // Conta o número de passageiros por tipo de transporte
 
-    // // 3. Converter para stream e encontrar o transporte com mais passageiros
+    // // Converter para stream e encontrar o transporte com mais passageiros
     // KStream<String, Long> topTransportTypeStream = passengersPerTransportType
     // .toStream()
     // .peek((transportType, count) -> 
@@ -215,15 +225,19 @@ public class KafkaStreamsProcessor {
     // }) // Acha o maior valor (por número de passageiros)
     // .toStream();
 
-    // // 4. Filtra para pegar apenas o tipo de transporte mais usado
+    // // Filtra para pegar apenas o tipo de transporte mais usado
     // KStream<String, Long> filteredTopTransport = topTransportTypeStream
     // .filter((transportType, count) -> count != null); // Remove valores nulos
 
-    // // 5. Publicar o resultado no tópico de saída (apenas um valor)
+    // // Publicar o resultado no tópico de saída (apenas um valor)
     // filteredTopTransport
     // .peek((key, value) -> System.out.println("Top Transport Type: " + key + " -> Passengers: " + value))
     // .to(requirementsTopics[10], Produced.with(Serdes.String(), Serdes.Long()));
 
+    //12. Get the routes with the least occupancy per transport type
+    // Taxa de ocupação por rota -> occupancyRatePerRoute já feito
+    // Criar uma tabela  join entre routeId e tipo de transporte
+ 
 
     // 16. Get the name of the passenger with the most trips
     // // Contar o número de viagens por passengerId
@@ -291,7 +305,7 @@ public class KafkaStreamsProcessor {
     //     .peek((key, value) -> System.out.println(value)) // Imprimir na consola
     //     .to(requirementsTopics[15], Produced.with(Serdes.String(), Serdes.String())); // Publicar no tópico de resultados
 
-
+    
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
         streams.start();
