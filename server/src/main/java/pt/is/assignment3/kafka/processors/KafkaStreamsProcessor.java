@@ -237,47 +237,85 @@ public class KafkaStreamsProcessor {
 
     //12. Get the routes with the least occupancy per transport type
     // Criar uma tabela com route id e tipo de transporte(EX 1-Train)
-    KTable<String, String> routeTransportTypeTable = routesKTable
-        .mapValues(route -> route.getTransportType());
+    // KTable<String, String> routeTransportTypeTable = routesKTable
+    //     .mapValues(route -> route.getTransportType());
 
-    routeTransportTypeTable.toStream()
-        .peek((k, v) -> System.out.println("Route Transport Type: " + k + " -> " + v))
-        .to(requirementsTopics[11], Produced.with(Serdes.String(), Serdes.String()));
+    // routeTransportTypeTable.toStream()
+    //     .peek((k, v) -> System.out.println("Route Transport Type: " + k + " -> " + v))
+    //     .to(requirementsTopics[11], Produced.with(Serdes.String(), Serdes.String()));
     
-    // Associar a taxa de ocupação ao tipo de transporte em uma String
-    KTable<String, String> occupancyRateWithTransportType = occupancyRatePerRoute
-        .join(routeTransportTypeTable,
-            (occupancyRate, transportType) -> String.format("%s -> %.2f", transportType, occupancyRate * 100)
-        );
+    // // Associar a taxa de ocupação ao tipo de transporte em uma String
+    // KTable<String, String> occupancyRateWithTransportType = occupancyRatePerRoute
+    //     .join(routeTransportTypeTable,
+    //         (occupancyRate, transportType) -> String.format("%s -> %.2f", transportType, occupancyRate * 100)
+    //     );
 
-    // Log de verificação
-    occupancyRateWithTransportType.toStream()
-        .peek((key, value) -> System.out.println("Route Id: " + key + " -> " + value));
+    // // Log de verificação
+    // occupancyRateWithTransportType.toStream()
+    //     .peek((key, value) -> System.out.println("Route Id: " + key + " -> " + value));
 
-    // Encontrar a rota com menor taxa de ocupação por tipo de transporte
-    KTable<String, String> leastOccupancyPerTransportType = occupancyRateWithTransportType
-        .toStream()
-        .groupBy(
-            (routeId, transportWithRate) -> transportWithRate.split(" -> ")[0], // Agrupar por tipo de transporte
-            Grouped.with(Serdes.String(), Serdes.String())
-        )
-        .reduce(
-            (aggValue, newValue) -> {
-                // Extrai as taxas de ocupação
-                double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
-                double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
-                return (aggRate <= newRate) ? aggValue : newValue; // Menor taxa de ocupação
-            }
-        );
-
-
-    // Log do resultado final
-    leastOccupancyPerTransportType.toStream()
-        .peek((key, value) -> System.out.println("Least Occupancy per Transport Type: " + key + " -> " + value))
-        .to(requirementsTopics[11], Produced.with(Serdes.String(), Serdes.String()));
+    // // Encontrar a rota com menor taxa de ocupação por tipo de transporte
+    // KTable<String, String> leastOccupancyPerTransportType = occupancyRateWithTransportType
+    //     .toStream()
+    //     .groupBy(
+    //         (routeId, transportWithRate) -> transportWithRate.split(" -> ")[0], // Agrupar por tipo de transporte
+    //         Grouped.with(Serdes.String(), Serdes.String())
+    //     )
+    //     .reduce(
+    //         (aggValue, newValue) -> {
+    //             // Extrai as taxas de ocupação
+    //             double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
+    //             double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
+    //             return (aggRate <= newRate) ? aggValue : newValue; // Menor taxa de ocupação
+    //         }
+    //     );
 
 
-    
+    // // Log do resultado final
+    // leastOccupancyPerTransportType.toStream()
+    //     .peek((key, value) -> System.out.println("Least Occupancy per Transport Type: " + key + " -> " + value))
+    //     .to(requirementsTopics[11], Produced.with(Serdes.String(), Serdes.String()));
+
+
+    //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
+    // Agrupar as rotas por operador
+    KTable<String, String> routeOperatorTable = routesKTable
+        .mapValues(route -> route.getOperatorName());
+
+    // 1. Associar a taxa de ocupação com o operador da rota
+    KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
+    .join(routeOperatorTable, 
+        (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate * 100)
+    );
+
+    // Log intermediário para validação
+    occupancyWithOperator.toStream()
+    .peek((key, value) -> System.out.println("Route Id: " + key + " -> " + value));
+
+    // 2. Encontrar o operador com a maior taxa de ocupação
+    KTable<String, String> operatorWithHighestOccupancy = occupancyWithOperator
+    .toStream()
+    .groupBy(
+        (routeId, operatorAndRate) -> operatorAndRate.split(" -> ")[0], // Agrupa pelo nome do operador
+        Grouped.with(Serdes.String(), Serdes.String())
+    )
+    .aggregate(
+        () -> "unknown -> 0.0", // Estado inicial com taxa de ocupação zero
+        (key, newValue, aggValue) -> {
+            double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
+            double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
+            
+            // Retém o maior valor de ocupação
+            return (newRate > aggRate) ? newValue : aggValue;
+        },
+        Materialized.with(Serdes.String(), Serdes.String())
+    );
+
+    // 3. Publicar o resultado no tópico de saída
+    operatorWithHighestOccupancy.toStream()
+    .peek((key, value) -> System.out.println("Operator with Highest Occupancy: " + key + " -> " + value))
+    .to("highest-occupancy-operator", Produced.with(Serdes.String(), Serdes.String()));
+
   
   
 
