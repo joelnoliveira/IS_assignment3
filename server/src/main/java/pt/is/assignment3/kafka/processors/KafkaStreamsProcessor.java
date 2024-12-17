@@ -18,6 +18,8 @@ import org.apache.kafka.streams.kstream.Joined;
 import org.apache.kafka.streams.kstream.KGroupedStream;
 import org.apache.kafka.streams.kstream.KGroupedTable;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.TimeWindows;
+import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
 import org.apache.logging.log4j.core.appender.routing.Routes;
@@ -83,14 +85,9 @@ public class KafkaStreamsProcessor {
         // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota) dar group by routeid
         KTable<String, Integer> capacityPerRoute = routeStream
             .groupBy((key, value) -> String.valueOf(value.getId()), Grouped.with(Serdes.String(), routeSerde))
-          // ...existing code...
             .aggregate(
                 () -> 0,
-                (routeId, route, capacity) -> route.getCapacity(),
-                Materialized.<String, Integer, KeyValueStore<Bytes, byte[]>>as("capacity-per-route")
-                    .withKeySerde(Serdes.String())
-                    .withValueSerde(Serdes.Integer())
-            );
+                (routeId, route, capacity) -> route.getCapacity());
 
 
 
@@ -269,7 +266,52 @@ public class KafkaStreamsProcessor {
     //             return (aggRate <= newRate) ? aggValue : newValue; // Menor taxa de ocupação
     //         }
     //     );
+        
+// 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
 
+// // 1. Contagem de passageiros por tipo de transporte em cada janela de 1 minuto
+// KTable<Windowed<String>, Long> passengersPerTransportTypeInLastHour = tripStream
+//     .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde))
+//     .windowedBy(TimeWindows.of(Duration.ofMinutes(1))) // Janela de 1 minuto
+//     .count(); // Contagem do número de viagens por tipo de transporte em cada janela
+
+// // 2. Agregar a contagem total de passageiros por tipo de transporte dentro de uma janela de 1 hora
+// KTable<String, Long> totalPassengersPerTransportTypeInLastHour = passengersPerTransportTypeInLastHour
+//     .toStream()
+//     .groupBy((key, value) -> key.key(), Grouped.with(Serdes.String(), Serdes.Long())) // Agrupa por tipo de transporte
+//     .aggregate(
+//         () -> 0L, // Valor inicial é 0L
+//         (aggKey, newValue, aggValue) -> aggValue + newValue, // Soma as contagens ao longo da janela de 1 hora
+//         Materialized.with(Serdes.String(), Serdes.Long()) // Materializa com os Serdes apropriados
+//     );
+
+// // 3. Encontrar o tipo de transporte com a maior contagem
+// KTable<String, Long> mostUsedTransportType = totalPassengersPerTransportTypeInLastHour
+//     .toStream()
+//     .groupBy((key, value) -> "mostUsedTransportType", Grouped.with(Serdes.String(), Serdes.Long())) // Agrupa todos os tipos de transporte em uma chave
+//     .reduce(
+//         (aggValue, newValue) -> {
+//             // Compara as contagens e retorna o maior valor
+//             return (aggValue >= newValue) ? aggValue : newValue;
+//         },
+//         Materialized.with(Serdes.String(), Serdes.Long()) // Materializa com Serdes apropriados
+//     );
+
+// // 4. Emitir o tipo de transporte com o maior número de passageiros e o valor
+// mostUsedTransportType
+//     .toStream()
+//     .peek((key, value) -> System.out.println("Most Used Transport Type in Last Hour: " + key + " -> " + value))
+//     .map((key, value) -> {
+//         // Aqui você pode mapear para o tipo de transporte e o valor total
+//         // Exemplo: retornando o tipo de transporte (key) e a quantidade de passageiros (value)
+//         return KeyValue.pair("Most Used Transport Type in Last Hour", key + " -> " + value);
+//     })
+//     .to(requirementsTopics[12], Produced.with(Serdes.String(), Serdes.String()));
+
+
+
+
+    
 
     // // Log do resultado final
     // leastOccupancyPerTransportType.toStream()
@@ -279,42 +321,42 @@ public class KafkaStreamsProcessor {
 
     //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
     // Agrupar as rotas por operador
-    KTable<String, String> routeOperatorTable = routesKTable
-        .mapValues(route -> route.getOperatorName());
+    // KTable<String, String> routeOperatorTable = routesKTable
+    //     .mapValues(route -> route.getOperatorName());
 
-    // 1. Associar a taxa de ocupação com o operador da rota
-    KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
-    .join(routeOperatorTable, 
-        (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate * 100)
-    );
+    // // Associar a taxa de ocupação com o operador da rota
+    // KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
+    // .join(routeOperatorTable, 
+    //     (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate * 100)
+    // );
 
-    // Log intermediário para validação
-    occupancyWithOperator.toStream()
-    .peek((key, value) -> System.out.println("Route Id: " + key + " -> " + value));
+    // // Log intermediário para validação
+    // occupancyWithOperator.toStream()
+    // .peek((key, value) -> System.out.println("Route Id: " + key + " -> " + value));
 
-    // 2. Encontrar o operador com a maior taxa de ocupação
-    KTable<String, String> operatorWithHighestOccupancy = occupancyWithOperator
-    .toStream()
-    .groupBy(
-        (routeId, operatorAndRate) -> operatorAndRate.split(" -> ")[0], // Agrupa pelo nome do operador
-        Grouped.with(Serdes.String(), Serdes.String())
-    )
-    .aggregate(
-        () -> "unknown -> 0.0", // Estado inicial com taxa de ocupação zero
-        (key, newValue, aggValue) -> {
-            double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
-            double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
+    // // Encontrar o operador com a maior taxa de ocupação
+    // KTable<String, String> operatorWithHighestOccupancy = occupancyWithOperator
+    // .toStream()
+    // .groupBy(
+    //     (routeId, operatorAndRate) -> operatorAndRate.split(" -> ")[0], // Agrupa pelo nome do operador
+    //     Grouped.with(Serdes.String(), Serdes.String())
+    // )
+    // .aggregate(
+    //     () -> "unknown -> 0.0", // Estado inicial com taxa de ocupação zero
+    //     (key, newValue, aggValue) -> {
+    //         double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
+    //         double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
             
-            // Retém o maior valor de ocupação
-            return (newRate > aggRate) ? newValue : aggValue;
-        },
-        Materialized.with(Serdes.String(), Serdes.String())
-    );
+    //         // Retém o maior valor de ocupação
+    //         return (newRate > aggRate) ? newValue : aggValue;
+    //     },
+    //     Materialized.with(Serdes.String(), Serdes.String())
+    // );
 
-    // 3. Publicar o resultado no tópico de saída
-    operatorWithHighestOccupancy.toStream()
-    .peek((key, value) -> System.out.println("Operator with Highest Occupancy: " + key + " -> " + value))
-    .to("highest-occupancy-operator", Produced.with(Serdes.String(), Serdes.String()));
+    // // Publicar o resultado no tópico de saída
+    // operatorWithHighestOccupancy.toStream()
+    // .peek((key, value) -> System.out.println("Operator with Highest Occupancy: " + key + " -> " + value))
+    // .to(requirementsTopics[14], Produced.with(Serdes.String(), Serdes.String()));
 
   
   

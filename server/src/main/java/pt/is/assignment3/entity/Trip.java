@@ -9,6 +9,7 @@ public class Trip {
     private long routeId;
     private long passengerId;
     private String passengerName;
+    private String transportType;
     
     // The next fields are specified in project assignment, but are redundant because they are already in Route entity, may be only necessary for debugging
     // private String origin, destination;
