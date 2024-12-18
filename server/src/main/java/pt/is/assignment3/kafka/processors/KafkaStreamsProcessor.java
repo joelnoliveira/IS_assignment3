@@ -380,9 +380,11 @@ public class KafkaStreamsProcessor {
         .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), tripSerde))
         .mapValues(trip -> trip.getPassengerName());
     
+    //Passenger Name: 1 -> Alice | Trips per Passenger ID: 1 -> 13 | Output -> Trips per Passenger: Alice -> 13 
     KTable<String, String> tripsPerPassengerWithName = tripsPerPassenger
         .join(passengerNames, (trips, name) -> name + "->" + trips);
     
+    // Trips per Passenger: Charlie->13 | Trips per Passenger: Bob->12 | Output -> Passenger with Most Trips: Charlie -> 13
     KTable<String, String> passengerWithMostTrips = tripsPerPassengerWithName.toStream()
         .groupBy(
             (passenger, trips) -> "most_trips", // Agrupa todos os resultados sob a mesma chave
