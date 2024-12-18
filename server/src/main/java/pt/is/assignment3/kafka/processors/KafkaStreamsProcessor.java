@@ -81,62 +81,55 @@ public class KafkaStreamsProcessor {
             .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
             .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
             .to(requirementsTopics[3]);
-
-        // //5 Get the capacity for each route (ter uma tabela com a capacidade de cada rota) dar group by routeid
+        
+        //5 show all the seats each route has
         KTable<String, Integer> capacityPerRoute = routeStream
-            .groupBy((key, value) -> String.valueOf(value.getId()), Grouped.with(Serdes.String(), routeSerde))
-            .aggregate(
-                () -> 0,
-                (routeId, route, capacity) -> route.getCapacity());
-
-
-
+            .selectKey((operatorId, route) -> String.valueOf(route.getId()))
+            .mapValues(route -> route.getCapacity())
+            .toTable(Materialized.with(Serdes.String(), Serdes.Integer()));
 
         capacityPerRoute.toStream()
             .peek((k, v) -> System.out.println("Capacity per route: " + k + " -> " + v))
-            .to(requirementsTopics[4], Produced.with(Serdes.String(), Serdes.Integer()));
+            .mapValues((routeId, capacity) -> new ResultsReq05(Long.parseLong(routeId), capacity).toString())
+            .to(requirementsTopics[4]);
 
+        //6 Calculate the occupancy percentage for each route (passengers / capacity)
+        KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
+        .join(capacityPerRoute, 
+            (passengers, capacity) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
+                ? (double) passengers / capacity 
+                : 0.0
+        );
 
-        // //6 Calculate passengers per capacity: divide the number of passengers by the total capacity for each route
-         // Taxa de ocupação por rota
-         KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
-         .join(capacityPerRoute, 
-             (passengers, capacity) -> (capacity != null && capacity > 0) 
-                 ? (double) passengers / capacity 
-                 : 0.0
-         );
-
-        // Logar a taxa de ocupação para debug
         occupancyRatePerRoute.toStream()
             .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
-            .to(requirementsTopics[5], Produced.with(Serdes.String(), Serdes.Double()));
+            .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
+            .to(requirementsTopics[5]);
     
 
-    //     //7 Get total passengers(from trips)
-    //      // Contar o número total de passageiros
-    //     KTable<String, Long> totalPassengers = tripStream
-    //         .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), tripSerde)) // Agrupa por uma chave constante
-    //         .count(); // Contagem acumulada
+        
+        // 7. Sum all the passengers across all trips (just one result)
+        KTable<String, Long> totalPassengers = tripStream
+            .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), tripSerde)) // Agrupa por uma chave constante
+            .count(); // Contagem acumulada
 
-    //     // // Enviar o total acumulado para um tópico
-    //     totalPassengers
-    //         .toStream()
-    //         .peek((k, v) -> System.out.println("Total Passengers: " + v))
-    //         .to(requirementsTopics[6], Produced.with(Serdes.String(), Serdes.Long()));
-            
+        totalPassengers
+            .toStream()
+            .peek((k, v) -> System.out.println("Total Passengers: " + v))
+            .mapValues((k, v) -> new ResultsReq07(v).toString())
+            .to(requirementsTopics[6]);
+        
+        //8 Get total seating available for all routes
+        KTable<String, Integer> totalCapacity = routeStream
+            .mapValues(route -> route.getCapacity()) // Extrai o campo capacity
+            .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), Serdes.Integer())) // Agrupa com chave constante
+            .reduce(Integer::sum); // Soma acumulada
 
-    //    //8 Get total seating available for all routes
-    //    // Somar a capacidade total
-    //    KTable<String, Integer> totalCapacity = routeStream
-    //    .mapValues(route -> route.getCapacity()) // Extrai o campo capacity
-    //    .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), Serdes.Integer())) // Agrupa com chave constante
-    //    .reduce(Integer::sum); // Soma acumulada
-
-    //     // Enviar o total acumulado para um tópico
-    //     totalCapacity
-    //         .toStream()
-    //         .peek((k, v) -> System.out.println("Total Seating Capacity: " + v))
-    //         .to(requirementsTopics[7], Produced.with(Serdes.String(), Serdes.Integer()));
+        totalCapacity
+            .toStream()
+            .peek((k, v) -> System.out.println("Total Seating Capacity: " + v))
+            .mapValues((k, v) -> new ResultsReq08(v+0L).toString())
+            .to(requirementsTopics[7]);
 
 
     //     // Combinar os dois valores para calcular o percentual de ocupação

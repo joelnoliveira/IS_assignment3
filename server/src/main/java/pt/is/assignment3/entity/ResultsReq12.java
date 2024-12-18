@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data @NoArgsConstructor @AllArgsConstructor// Lombok annotations to create getters, setters and constructor (boilerplate code)
 public class ResultsReq12 { // routes with the least occupancy per transport type
 
-    private Long routeId;
+    private long routeId;
     private String transportType;
 
     @Override

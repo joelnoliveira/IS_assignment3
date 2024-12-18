@@ -21,7 +21,7 @@ public class KafkaJSONDeserializer<T> implements Deserializer<T> {
         try {
             // convert to String and print
             String dataStr = new String(data);
-            System.out.println("Deserializing to an object: " + dataStr);
+            // System.out.println("Deserializing to an object: " + dataStr);
             return objectMapper.readValue(data, targetType);
         } catch (Exception e) {
             e.printStackTrace();

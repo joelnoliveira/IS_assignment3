@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data @NoArgsConstructor @AllArgsConstructor// Lombok annotations to create getters, setters and constructor (boilerplate code)
 public class ResultsReq07 { // total passengers (all routes summed)
 
-    private Long totalPassengers;
+    private long totalPassengers;
 
     @Override
     public String toString() { // postgres schema

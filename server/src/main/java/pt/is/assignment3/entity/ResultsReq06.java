@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 @Data @NoArgsConstructor @AllArgsConstructor// Lombok annotations to create getters, setters and constructor (boilerplate code)
 public class ResultsReq06 { // Occupancy percentage per route
 
-    private Long routeId;
+    private long routeId;
     private double occupancy;
 
     @Override

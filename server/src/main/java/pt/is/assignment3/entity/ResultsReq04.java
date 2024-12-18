@@ -12,8 +12,8 @@ public class ResultsReq04 { // Get the passengers per route
     // @Id
     // private Long id;
 
-    private Long routeId;
-    private Long passengerCount;
+    private long routeId;
+    private long passengerCount;
 
     @Override
     public String toString() { // postgres schema
