@@ -265,46 +265,54 @@ public class KafkaStreamsProcessor {
     // .to(requirementsTopics[12]);
 
 
-    // //14. Get the least occupied transport type in the last hour (use a tumbling time window)
-    // // Somar capacidade por tipo de transporte na janela de 1 minuto
-    // KTable<Windowed<String>, Long> capacityPerTransport = routeStream
-    // .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
-    // .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(1))) // Define janela de 1 minuto
-    // .aggregate(
-    //     () -> 0L, // Valor inicial
-    //     (key, value, aggregate) -> aggregate + value.getCapacity(), // Soma a capacidade
-    //     Materialized.with(Serdes.String(), Serdes.Long())
-    // );
+    //14. Get the least occupied transport type in the last hour (use a tumbling time window)
+    //Passengers per transport type in a 1-minute window
+    KTable<Windowed<String>, Long> passengersPerTransport = tripStream
+    .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
+    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(1))) // Define janela de 1 minuto
+    .count(); // Conta o número de passageiros por transporte
+    
+    // Somar capacidade por tipo de transporte na janela de 1 minuto
+    KTable<Windowed<String>, Long> capacityPerTransport = routeStream
+    .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
+    .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(1))) // Define janela de 1 minuto
+    .aggregate(
+        () -> 0L, // Valor inicial
+        (key, value, aggregate) -> aggregate + value.getCapacity(), // Soma a capacidade
+        Materialized.with(Serdes.String(), Serdes.Long())
+    );
 
-    // // Calcular a taxa de ocupação por tipo de transporte
-    // KTable<Windowed<String>, Double> occupancyRatePerTransport = passengersPerTransport
-    // .join(capacityPerTransport, (passengers, capacity) -> {
-    //     if (capacity == 0) {
-    //         return 0.0; // Evita divisão por zero
-    //     }
-    //     return (double) passengers / capacity; // Calcula a taxa de ocupação
-    // });
+    // Calcular a taxa de ocupação por tipo de transporte
+    KTable<Windowed<String>, Double> occupancyRatePerTransport = passengersPerTransport
+    .join(capacityPerTransport, (passengers, capacity) -> {
+        if (capacity == 0) {
+            return 0.0; // Evita divisão por zero
+        }
+        return (double) passengers / capacity; // Calcula a taxa de ocupação
+    });
 
-    // // Encontrar o tipo de transporte menos ocupado
-    // KTable<String, String> leastOccupiedTransportType = occupancyRatePerTransport.toStream()
-    // .map((key, value) -> KeyValue.pair("least_occupied_transport", key.key() + "->" + value)) // Formata como "tipo,ocupação"
-    // .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
-    // .reduce((aggValue, newValue) -> {
-    //     // Separa o tipo e a ocupação
-    //     String[] newParts = newValue.split("->");
-    //     String[] currentParts = aggValue.split("->");
-    //     // Se a nova ocupação for menor, retorna o novo valor
-    //     if (newParts.length == 2 && currentParts.length == 2) {
-    //         double newRate = Double.parseDouble(newParts[1]);
-    //         double currentRate = Double.parseDouble(currentParts[1]);
-    //         return (newRate < currentRate) ? newValue : aggValue;
-    //     }
-    //     return aggValue; // Retorna o valor atual em caso de erro
-    // });
+    // Encontrar o tipo de transporte menos ocupado
+    KTable<String, String> leastOccupiedTransportType = occupancyRatePerTransport.toStream()
+    .map((key, value) -> KeyValue.pair("least_occupied_transport", key.key() + "->" + value)) // Formata como "tipo,ocupação"
+    .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
+    .reduce((aggValue, newValue) -> {
+        // Separa o tipo e a ocupação
+        String[] newParts = newValue.split("->");
+        String[] currentParts = aggValue.split("->");
+        // Se a nova ocupação for menor, retorna o novo valor
+        if (newParts.length == 2 && currentParts.length == 2) {
+            double newRate = Double.parseDouble(newParts[1]);
+            double currentRate = Double.parseDouble(currentParts[1]);
+            return (newRate < currentRate) ? newValue : aggValue;
+        }
+        return aggValue; // Retorna o valor atual em caso de erro
+    });
 
-    // // Publicar o tipo de transporte menos ocupado
-    // leastOccupiedTransportType.toStream()
-    // .peek((key, value) -> System.out.println("Least Occupied Transport Type: " + value));
+    // Publicar o tipo de transporte menos ocupado
+    leastOccupiedTransportType.toStream()
+    .peek((key, value) -> System.out.println("Least Occupied Transport Type: " + value))
+    .mapValues((k, v) -> new ResultsReq14(v).toString())
+    .to(requirementsTopics[13]);
 
 
     //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
