@@ -260,57 +260,38 @@ public class KafkaStreamsProcessor {
     //         }
     //     );
         
-// 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
-
-// // 1. Contagem de passageiros por tipo de transporte em cada janela de 1 minuto
-// KTable<Windowed<String>, Long> passengersPerTransportTypeInLastHour = tripStream
-//     .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde))
-//     .windowedBy(TimeWindows.of(Duration.ofMinutes(1))) // Janela de 1 minuto
-//     .count(); // Contagem do número de viagens por tipo de transporte em cada janela
-
-// // 2. Agregar a contagem total de passageiros por tipo de transporte dentro de uma janela de 1 hora
-// KTable<String, Long> totalPassengersPerTransportTypeInLastHour = passengersPerTransportTypeInLastHour
-//     .toStream()
-//     .groupBy((key, value) -> key.key(), Grouped.with(Serdes.String(), Serdes.Long())) // Agrupa por tipo de transporte
-//     .aggregate(
-//         () -> 0L, // Valor inicial é 0L
-//         (aggKey, newValue, aggValue) -> aggValue + newValue, // Soma as contagens ao longo da janela de 1 hora
-//         Materialized.with(Serdes.String(), Serdes.Long()) // Materializa com os Serdes apropriados
-//     );
-
-// // 3. Encontrar o tipo de transporte com a maior contagem
-// KTable<String, Long> mostUsedTransportType = totalPassengersPerTransportTypeInLastHour
-//     .toStream()
-//     .groupBy((key, value) -> "mostUsedTransportType", Grouped.with(Serdes.String(), Serdes.Long())) // Agrupa todos os tipos de transporte em uma chave
-//     .reduce(
-//         (aggValue, newValue) -> {
-//             // Compara as contagens e retorna o maior valor
-//             return (aggValue >= newValue) ? aggValue : newValue;
-//         },
-//         Materialized.with(Serdes.String(), Serdes.Long()) // Materializa com Serdes apropriados
-//     );
-
-// // 4. Emitir o tipo de transporte com o maior número de passageiros e o valor
-// mostUsedTransportType
-//     .toStream()
-//     .peek((key, value) -> System.out.println("Most Used Transport Type in Last Hour: " + key + " -> " + value))
-//     .map((key, value) -> {
-//         // Aqui você pode mapear para o tipo de transporte e o valor total
-//         // Exemplo: retornando o tipo de transporte (key) e a quantidade de passageiros (value)
-//         return KeyValue.pair("Most Used Transport Type in Last Hour", key + " -> " + value);
-//     })
-//     .to(requirementsTopics[12], Produced.with(Serdes.String(), Serdes.String()));
-
-
-
-
+    // 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
+    // 1. Contagem de passageiros por tipo de transporte em uma janela de 1 minuto
+    KTable<Windowed<String>, Long> passengersPerTransport = tripStream
+    .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
+    .windowedBy(TimeWindows.of(Duration.ofMinutes(1))) // Define janela de 1 minuto
+    .count(); // Conta o número de passageiros por transporte
     
+    passengersPerTransport.toStream()
+    .peek((key, value) -> System.out.println("Passengers per Transport Type: " + key.key() + "->" + value));
 
-    // // Log do resultado final
-    // leastOccupancyPerTransportType.toStream()
-    //     .peek((key, value) -> System.out.println("Least Occupancy per Transport Type: " + key + " -> " + value))
-    //     .to(requirementsTopics[11], Produced.with(Serdes.String(), Serdes.String()));
+    // Encontrar o tipo de transporte mais utilizado
+    KTable<String, String> mostUsedTransportType = passengersPerTransport.toStream()
+    .map((key, value) -> KeyValue.pair("most_used_transport", key.key() + "->" + value)) // Formata como "tipo,contagem"
+    .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
+    .reduce((aggValue, newValue) -> {
+        // Separa o tipo e a contagem
+        String[] newParts = newValue.split("->");
+        String[] currentParts = aggValue.split("->");
+        // Se a nova contagem for maior, retorna o novo valor
+        if (newParts.length == 2 && currentParts.length == 2) {
+            int newCount = Integer.parseInt(newParts[1]);
+            int currentCount = Integer.parseInt(currentParts[1]);
+            return (newCount > currentCount) ? newValue : aggValue;
+        }
+        return aggValue; // Retorna o valor atual em caso de erro
+    });
 
+    // Publicar o tipo de transporte mais usado
+    mostUsedTransportType.toStream()
+    .peek((key, value) -> System.out.println("Most Used Transport Type: " + value))
+    .mapValues((key, value) -> new ResultsReq13(value).toString())
+    .to(requirementsTopics[12]);
 
     //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
     // Agrupar as rotas por operador
