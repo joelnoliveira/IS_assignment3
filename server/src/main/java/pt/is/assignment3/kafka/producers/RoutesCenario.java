@@ -103,7 +103,7 @@ public class RoutesCenario {
             System.out.println("Press Enter to produce a new route");
             System.in.read();
 
-            ProducerRecord<String, Route> record = new ProducerRecord<>(outputTopic, route.getOperatorId()+"",route); // defined OperatorId as key because it seemed the most appropriate
+            ProducerRecord<String, Route> record = new ProducerRecord<>(outputTopic, route.getId()+"",route); // defined OperatorId as key because it seemed the most appropriate
             producer.send(record);
 
             //give feedback
