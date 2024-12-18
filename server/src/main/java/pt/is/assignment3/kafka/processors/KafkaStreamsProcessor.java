@@ -70,40 +70,41 @@ public class KafkaStreamsProcessor {
             })
             .filter((key, value) -> value != null)
             .groupBy((key, value) -> key)
+
             .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), tripSerde));
 
-        // // 4. Calculate passengers per route: count the number of trips for each routeId
-        // KTable<String, Long> passengersPerRoute = tripStream
-        //     .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
-        //     .count();
+        // 4. Calculate passengers per route: count the number of trips for each routeId
+        KTable<String, Long> passengersPerRoute = tripStream
+            .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
+            .count();
 
-        // passengersPerRoute.toStream()
-        //     .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
-        //     .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
-        //     .to(requirementsTopics[3]);
+        passengersPerRoute.toStream()
+            .peek((k, v) -> System.out.println("Passengers per route: " + k + " -> " + v))
+            .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
+            .to(requirementsTopics[3]);
         
-        // //5 show all the seats each route has
-        // KTable<String, Integer> capacityPerRoute = routeStream
-        //     .mapValues(route -> route.getCapacity())
-        //     .toTable(Materialized.with(Serdes.String(), Serdes.Integer()));
+        //5 show all the seats each route has
+        KTable<String, Integer> capacityPerRoute = routeStream
+            .mapValues(route -> route.getCapacity())
+            .toTable(Materialized.with(Serdes.String(), Serdes.Integer()));
 
-        // capacityPerRoute.toStream()
-        //     .peek((k, v) -> System.out.println("Capacity per route: " + k + " -> " + v))
-        //     .mapValues((routeId, capacity) -> new ResultsReq05(Long.parseLong(routeId), capacity).toString())
-        //     .to(requirementsTopics[4]);
+        capacityPerRoute.toStream()
+            .peek((k, v) -> System.out.println("Capacity per route: " + k + " -> " + v))
+            .mapValues((routeId, capacity) -> new ResultsReq05(Long.parseLong(routeId), capacity).toString())
+            .to(requirementsTopics[4]);
 
-        // //6 Calculate the occupancy percentage for each route (passengers / capacity)
-        // KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
-        // .join(capacityPerRoute, 
-        //     (passengers, capacity) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
-        //         ? (double) passengers / capacity 
-        //         : 0.0
-        // );
+        //6 Calculate the occupancy percentage for each route (passengers / capacity)
+        KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
+        .join(capacityPerRoute, 
+            (passengers, capacity) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
+                ? (double) passengers / capacity 
+                : 0.0
+        );
 
-        // occupancyRatePerRoute.toStream()
-        //     .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
-        //     .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
-        //     .to(requirementsTopics[5]);
+        occupancyRatePerRoute.toStream()
+            .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
+            .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
+            .to(requirementsTopics[5]);
     
 
         
@@ -306,44 +307,66 @@ public class KafkaStreamsProcessor {
     // .peek((key, value) -> System.out.println("Least Occupied Transport Type: " + value));
 
 
-    // //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
-    // // Agrupar as rotas por operador
-    // KTable<String, String> routeOperatorTable = routesKTable
-    //     .mapValues(route -> route.getOperatorName());
+    //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
+    // Associar o operador ao id da rota
+    KTable<String, String> routeOperatorTable =routeStream
+    .groupBy((key, value) -> String.valueOf(value.getId()), Grouped.with(Serdes.String(), routeSerde))
+    .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), routeSerde))
+    .mapValues(route -> route.getOperatorName());
 
-    // // Associar a taxa de ocupação com o operador da rota
-    // KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
-    // .join(routeOperatorTable, 
-    //     (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate * 100)
-    // );
+    routeOperatorTable.toStream()
+        .peek((key, value) -> System.out.println("Route Operator: " + key + " -> " + value));
+    // Associar a taxa de ocupação com o operador da rota
+    KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
+    .join(routeOperatorTable, 
+        (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate * 100)
+    );
 
-    // // Encontrar o operador com a maior taxa de ocupação
-    // KTable<String, String> operatorWithHighestOccupancy = occupancyWithOperator
-    // .toStream()
-    // .groupBy(
-    //     (routeId, operatorAndRate) -> operatorAndRate.split(" -> ")[0], // Agrupa pelo nome do operador
-    //     Grouped.with(Serdes.String(), Serdes.String())
-    // )
-    // .aggregate(
-    //     () -> "unknown -> 0.0", // Estado inicial com taxa de ocupação zero
-    //     (key, newValue, aggValue) -> {
-    //         double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
-    //         double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
-            
-    //         // Retém o maior valor de ocupação
-    //         return (newRate > aggRate) ? newValue : aggValue;
-    //     },
-    //     Materialized.with(Serdes.String(), Serdes.String())
-    // );
+    occupancyWithOperator.toStream()
+        .peek((key, value) -> System.out.println("Operator with Occupancy: " + key + " -> " + value));
 
-    // // Publicar o resultado no tópico de saída
-    // operatorWithHighestOccupancy.toStream()
-    // .mapValues(value -> {
-    //     String[] parts = value.split(" -> ");
-    //     return parts[1]; // Retorna apenas a taxa de ocupação
-    // })
-    // .peek((key, value) -> System.out.println("Operator with Highest Occupancy: " + key + " -> " + value))
-    // .to(requirementsTopics[14], Produced.with(Serdes.String(), Serdes.String()));
+    // Encontrar o operador com a maior taxa de ocupação Operator with Occupancy: Operator 1 -> 100.00
+    KTable<String, String> operatorWithHighestOccupancy = occupancyWithOperator
+    .toStream()
+    .groupBy(
+        (routeId, operatorWithRate) -> "highest_occupancy", // Agrupa todos os resultados sob a mesma chave
+        Grouped.with(Serdes.String(), Serdes.String())
+    )
+    .reduce(
+        (aggValue, newValue) -> {
+            // Separa o operador e a taxa de ocupação
+            String[] newParts = newValue.split(" -> ");
+            String[] currentParts = aggValue.split(" -> ");
+            // Se a nova taxa for maior, retorna o novo valor
+            if (newParts.length == 2 && currentParts.length == 2) {
+                double newRate = Double.parseDouble(newParts[1]);
+                double currentRate = Double.parseDouble(currentParts[1]);
+                return (newRate > currentRate) ? newValue : aggValue;
+            }
+            return aggValue; // Retorna o valor atual em caso de erro
+        }
+        
+    );
+    
+        // Separar a chave e valor para formatar os dados finais
+    KStream<String, String> finalStream = operatorWithHighestOccupancy
+    .toStream()
+    .map((key, value) -> {
+        // Separar operador e taxa de ocupação
+        String[] parts = value.split(" -> ");
+        if (parts.length == 2) {
+            String operator = parts[0];
+            String occupancyRate = parts[1];
+            return KeyValue.pair(operator, occupancyRate);
+        }
+        return KeyValue.pair("unknown_operator", "0.00"); // Retorna um valor padrão em caso de erro
+    });
+
+    // Publicar o resultado no tópico de saída
+    finalStream
+    .peek((key, value) -> System.out.println("Operator with Highest Occupancy: " + key + " -> " + value))
+    .mapValues((k, v) -> new ResultsReq15(k, Double.parseDouble(v)).toString())
+    .to(requirementsTopics[14]);
 
     // 16. Get the name of the passenger with the most trips
     // Passenger id -> Number of trips
@@ -357,12 +380,9 @@ public class KafkaStreamsProcessor {
         .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), tripSerde))
         .mapValues(trip -> trip.getPassengerName());
     
-    //Passenger Name: 1 -> Alice | Trips per Passenger ID: 1 -> 13 | Output -> Trips per Passenger: Alice -> 13 
     KTable<String, String> tripsPerPassengerWithName = tripsPerPassenger
         .join(passengerNames, (trips, name) -> name + "->" + trips);
     
-
-    // Trips per Passenger: Charlie->13 | Trips per Passenger: Bob->12 | Output -> Passenger with Most Trips: Charlie -> 13
     KTable<String, String> passengerWithMostTrips = tripsPerPassengerWithName.toStream()
         .groupBy(
             (passenger, trips) -> "most_trips", // Agrupa todos os resultados sob a mesma chave
