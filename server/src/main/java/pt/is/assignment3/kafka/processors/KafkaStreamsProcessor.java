@@ -38,7 +38,7 @@ public class KafkaStreamsProcessor {
         String [] requirementsTopics = {"results_req01","results_req02","results_req03","results_req04","results_req05","results_req06","results_req07","results_req08","results_req09","results_req10","results_req11","results_req12","results_req13","results_req14","results_req15","results_req16"};
       
         java.util.Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-streams-app");
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-streams-app10");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "broker1:9092, broker2:9092, broker3:9092");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
@@ -97,16 +97,15 @@ public class KafkaStreamsProcessor {
         KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
         .join(capacityPerRoute, 
             (passengers, capacity) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
-                ? (double) passengers / capacity 
+                ? ((double) passengers / capacity)*100
                 : 0.0
         );
 
         occupancyRatePerRoute.toStream()
-            .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
+            .peek((key, value) -> System.out.printf("Route Id: %s -> Occupancy Rate: %.2f %%\n", key, value))
             .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
             .to(requirementsTopics[5]);
-    
-
+        
         
         // 7. Sum all the passengers across all trips (just one result)
         KTable<String, Long> totalPassengers = tripStream
@@ -132,23 +131,16 @@ public class KafkaStreamsProcessor {
             .to(requirementsTopics[7]);
 
 
-    //     // Combinar os dois valores para calcular o percentual de ocupação
-    //     KTable<String, Double> occupancyPercentageTable = totalPassengers
-    //     .join(
-    //         totalCapacity, // Aqui você usa a outra KTable (totalCapacity)
-    //         (passengers, capacity) -> {
-    //             if (capacity == 0) {
-    //                 return 0.0; // Evita divisão por zero
-    //             }
-    //             return (passengers * 100.0) / capacity; // Calcula o percentual de ocupação
-    //         }
-    //     );
-    
-
-    //     // Enviar o percentual de ocupação para um tópico
-    //     occupancyPercentageTable.toStream()
-    //         .peek((key, value) -> System.out.println("Occupancy Percentage: " + value + "%"))
-    //         .to(requirementsTopics[8], Produced.with(Serdes.String(), Serdes.Double()));
+        // 9 Get the total occupancy percentage (all passengers / all seats)
+        totalPassengers
+            .join(
+                totalCapacity,
+                (allPassengers, allCapacity) -> ((allCapacity > 0 && allPassengers > 0) ? ((double) allPassengers / allCapacity)* 100 : 0.0)
+            )
+            .toStream()
+            .peek((key, value) -> System.out.printf("Total Occupancy Percentage: %.2f %%\n", value))
+            .mapValues((k, v) -> new ResultsReq09(v).toString())
+            .to(requirementsTopics[8]);
     
     //10. Get	the	average	number	of	passengers	per	transport	type
     // Criar uma tabela associando cada routeId ao tipo de transporte
@@ -262,36 +254,36 @@ public class KafkaStreamsProcessor {
         
     // 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
     // 1. Contagem de passageiros por tipo de transporte em uma janela de 1 minuto
-    KTable<Windowed<String>, Long> passengersPerTransport = tripStream
-    .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
-    .windowedBy(TimeWindows.of(Duration.ofMinutes(1))) // Define janela de 1 minuto
-    .count(); // Conta o número de passageiros por transporte
+    // KTable<Windowed<String>, Long> passengersPerTransport = tripStream
+    // .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
+    // .windowedBy(TimeWindows.of(Duration.ofMinutes(1))) // Define janela de 1 minuto
+    // .count(); // Conta o número de passageiros por transporte
     
-    passengersPerTransport.toStream()
-    .peek((key, value) -> System.out.println("Passengers per Transport Type: " + key.key() + "->" + value));
+    // passengersPerTransport.toStream()
+    // .peek((key, value) -> System.out.println("Passengers per Transport Type: " + key.key() + "->" + value));
 
-    // Encontrar o tipo de transporte mais utilizado
-    KTable<String, String> mostUsedTransportType = passengersPerTransport.toStream()
-    .map((key, value) -> KeyValue.pair("most_used_transport", key.key() + "->" + value)) // Formata como "tipo,contagem"
-    .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
-    .reduce((aggValue, newValue) -> {
-        // Separa o tipo e a contagem
-        String[] newParts = newValue.split("->");
-        String[] currentParts = aggValue.split("->");
-        // Se a nova contagem for maior, retorna o novo valor
-        if (newParts.length == 2 && currentParts.length == 2) {
-            int newCount = Integer.parseInt(newParts[1]);
-            int currentCount = Integer.parseInt(currentParts[1]);
-            return (newCount > currentCount) ? newValue : aggValue;
-        }
-        return aggValue; // Retorna o valor atual em caso de erro
-    });
+    // // Encontrar o tipo de transporte mais utilizado
+    // KTable<String, String> mostUsedTransportType = passengersPerTransport.toStream()
+    // .map((key, value) -> KeyValue.pair("most_used_transport", key.key() + "->" + value)) // Formata como "tipo,contagem"
+    // .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
+    // .reduce((aggValue, newValue) -> {
+    //     // Separa o tipo e a contagem
+    //     String[] newParts = newValue.split("->");
+    //     String[] currentParts = aggValue.split("->");
+    //     // Se a nova contagem for maior, retorna o novo valor
+    //     if (newParts.length == 2 && currentParts.length == 2) {
+    //         int newCount = Integer.parseInt(newParts[1]);
+    //         int currentCount = Integer.parseInt(currentParts[1]);
+    //         return (newCount > currentCount) ? newValue : aggValue;
+    //     }
+    //     return aggValue; // Retorna o valor atual em caso de erro
+    // });
 
-    // Publicar o tipo de transporte mais usado
-    mostUsedTransportType.toStream()
-    .peek((key, value) -> System.out.println("Most Used Transport Type: " + value))
-    .mapValues((key, value) -> new ResultsReq13(value).toString())
-    .to(requirementsTopics[12]);
+    // // Publicar o tipo de transporte mais usado
+    // mostUsedTransportType.toStream()
+    // .peek((key, value) -> System.out.println("Most Used Transport Type: " + value))
+    // .mapValues((key, value) -> new ResultsReq13(value).toString())
+    // .to(requirementsTopics[12]);
 
     //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
     // Agrupar as rotas por operador

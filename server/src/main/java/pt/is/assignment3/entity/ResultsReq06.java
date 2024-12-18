@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 public class ResultsReq06 { // Occupancy percentage per route
 
     private long routeId;
-    private double occupancy;
+    private double occupancyPercentage;
 
     @Override
     public String toString() { // postgres schema
@@ -18,15 +18,15 @@ public class ResultsReq06 { // Occupancy percentage per route
                 "type": "struct",
                 "fields": [
                     {"type": "int64", "optional": false, "field": "route_id"},
-                    {"type": "double", "optional": false, "field": "occupancy"}
+                    {"type": "double", "optional": false, "field": "occupancy_percentage"}
                 ],
                 "optional": false
             },
             "payload": {
                 "route_id": %d,
-                "occupancy": %.2f
+                "occupancy_percentage": %.2f
             }
         }
-        """, routeId, occupancy);
+        """, routeId, occupancyPercentage);
     }   
 }
