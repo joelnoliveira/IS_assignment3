@@ -142,12 +142,24 @@ public class KafkaStreamsProcessor {
             .mapValues((k, v) -> new ResultsReq09(v).toString())
             .to(requirementsTopics[8]);
     
-    // //10. Get	the	average	number	of	passengers	per	transport	type
-    // // Criar uma tabela associando cada routeId ao tipo de transporte
-    // KTable<String, String> routeTransportTypeTable = routeStream
-    //     .selectKey((key, route) -> String.valueOf(route.getId())) // Usa o routeId como chave
-    //     .mapValues(Route::getTransportType) // Extrai o tipo de transporte
-    //     .toTable(Materialized.with(Serdes.String(), Serdes.String())); // Converte para KTable
+        //10. Get	the	average	number	of	passengers	per	transport	type
+        // create a KTable with the number of passengers per transport type
+        KTable<String, Long> passengersPerTransportType = tripStream
+            .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde))
+            .count();
+        
+        // for each transport type divide with the totalPassengers
+        passengersPerTransportType
+            .join(totalPassengers, (passengers, total) -> ((total >0) ? (double) passengers / total : 0.0))
+            .toStream()
+            .peek((key, value) -> System.out.printf("Average Passengers per Transport Type: %s -> %.2f %%\n", key, value))
+            .mapValues((k, v) -> new ResultsReq10(k, v).toString())
+            .to(requirementsTopics[9]);
+        
+        // KTable<String, String> routeTransportTypeTable = routeStream
+        //     .selectKey((key, route) -> String.valueOf(route.getId())) // Usa o routeId como chave
+        //     .mapValues(Route::getTransportType) // Extrai o tipo de transporte
+        //     .toTable(Materialized.with(Serdes.String(), Serdes.String())); // Converte para KTable
 
     // // Contar o número de passageiros por tipo de transporte
     // KTable<String, Long> passengersPerTransportType = tripStream
@@ -182,10 +194,6 @@ public class KafkaStreamsProcessor {
 
 
     // 11. Get the transport type with the highest number of served passengers (only one if there is a tie)
-    // Contar o número de passageiros por tipo de transporte
-    KTable<String, Long> passengersPerTransportType = tripStream
-        .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde))
-        .count();
     // Pegar o tipo de transporte com o maior número de passageiros
     KTable<String, String> highestPassengersTransportType = passengersPerTransportType
         .toStream()
