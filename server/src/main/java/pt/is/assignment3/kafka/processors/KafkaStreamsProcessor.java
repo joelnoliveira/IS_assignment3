@@ -94,15 +94,15 @@ public class KafkaStreamsProcessor {
             .to(requirementsTopics[4]);
 
         //6 Calculate the occupancy percentage for each route (passengers / capacity)
-        KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
-        .join(capacityPerRoute, 
-            (passengers, capacity) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
-                ? (double) passengers / capacity 
+        KTable<String, Double> occupancyRatePerRoute = capacityPerRoute
+        .leftJoin(passengersPerRoute, 
+            (capacity, passengers) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
+                ? ((double) passengers / capacity)*100 
                 : 0.0
         );
 
         occupancyRatePerRoute.toStream()
-            .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value*100 + "%"))
+            .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value + "%"))
             .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
             .to(requirementsTopics[5]);
     
