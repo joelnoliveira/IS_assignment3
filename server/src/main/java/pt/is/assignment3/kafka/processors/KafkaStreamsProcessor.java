@@ -52,7 +52,7 @@ public class KafkaStreamsProcessor {
         KStream<String, Route> routeStream = builder.stream(routesTopic, Consumed.with(Serdes.String(), routeSerde));
         KStream<String, Trip> tripStream = builder.stream(tripsTopic, Consumed.with(Serdes.String(), tripSerde));
         
-        // 4. Get the passengers per route
+        // 4. Calculate passengers per route: count the number of trips for each routeId
         KTable<String, Long> passengersPerRoute = tripStream
             .groupBy((key, trip) -> String.valueOf(trip.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
             .count();
@@ -62,36 +62,28 @@ public class KafkaStreamsProcessor {
             .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
             .to(requirementsTopics[3]);
         
-        
-        //5 Get the available seats per route
-        //Somar a capacidade por rota (routeId -> capacidade output: 1 -> 4)
+        //5 show all the seats each route has
         KTable<String, Integer> capacityPerRoute = routeStream
-            .groupBy((key, route) -> String.valueOf(route.getId()), Grouped.with(Serdes.String(), routeSerde))
-            .aggregate(
-                () -> 0, // Valor inicial
-                (key, route, aggregate) -> aggregate + route.getCapacity(), // Soma a capacidade
-                Materialized.with(Serdes.String(), Serdes.Integer())
-            );
-        
- 
+            .mapValues(route -> route.getCapacity())
+            .toTable(Materialized.with(Serdes.String(), Serdes.Integer()));
+
         capacityPerRoute.toStream()
             .peek((k, v) -> System.out.println("Capacity per route: " + k + " -> " + v))
             .mapValues((routeId, capacity) -> new ResultsReq05(Long.parseLong(routeId), capacity).toString())
             .to(requirementsTopics[4]);
-        
+
         //6 Calculate the occupancy percentage for each route (passengers / capacity)
-        KTable<String, Double> occupancyRatePerRoute = passengersPerRoute
-            .join(
-                capacityPerRoute,
-                (passengers, capacity) -> ((capacity > 0) ? ((double) passengers / capacity) * 100 : 0.0)
-            );
+        KTable<String, Double> occupancyRatePerRoute = capacityPerRoute
+        .leftJoin(passengersPerRoute, 
+            (capacity, passengers) -> (capacity != null && capacity > 0 && passengers != null && passengers > 0) 
+                ? ((double) passengers / capacity)*100 
+                : 0.0
+        );
 
         occupancyRatePerRoute.toStream()
             .peek((key, value) -> System.out.println("Route Id: " + key + " -> Occupancy Rate: " + value + "%"))
             .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
             .to(requirementsTopics[5]);
-    
-
         
         // 7. Sum all the passengers across all trips (just one result)
         KTable<String, Long> totalPassengers = tripStream
