@@ -180,98 +180,125 @@ public class KafkaStreamsProcessor {
     //     .mapValues((k, v) -> new ResultsReq10(k, v).toString())
     //     .to(requirementsTopics[9]);
 
-//     //11. Get	the	transport	type	with	the	highest	number	of	served	passengers	(only one if	there	is	a	tie)
-//     // Converter para stream e encontrar o transporte com mais passageiros
-//     KTable<String, Long> topTransportType = passengersPerTransportType
-//    .map((transportType, passengers) -> KeyValue.pair("top_transport", transportType + "->" + passengers)) // Formata como "tipo,passageiros"
-//     .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
-//     .reduce((aggValue, newValue) -> {
-//         // Separa o tipo e a quantidade de passageiros
-//         String[] newParts = newValue.split("->");
-//         String[] currentParts = aggValue.split("->");
-//         // Se a nova quantidade for maior, retorna o novo valor
-//         if (newParts.length == 2 && currentParts.length == 2) {
-//             int newPassengers = Integer.parseInt(newParts[1]);
-//             int currentPassengers = Integer.parseInt(currentParts[1]);
-//             return (newPassengers > currentPassengers) ? newValue : aggValue;
-//         }
-//         return aggValue; // Retorna o valor atual em caso de erro
-//     });
 
-//     // Publicar o tipo de transporte com mais passageiros
-//     topTransportType.toStream()
-//     .peek((key, value) -> System.out.println("Transport Type with Most Passengers: " + value));
+    // 11. Get the transport type with the highest number of served passengers (only one if there is a tie)
+    // Contar o número de passageiros por tipo de transporte
+    KTable<String, Long> passengersPerTransportType = tripStream
+        .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde))
+        .count();
+    // Pegar o tipo de transporte com o maior número de passageiros
+    KTable<String, String> highestPassengersTransportType = passengersPerTransportType
+        .toStream()
+        .map((key, value) -> KeyValue.pair("highest_passengers", key + "->" + value))
+        .peek((key, value) -> System.out.println("Transport Type: "  + value))
+        .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
+        .reduce((aggValue, newValue) -> {
+            String[] newParts = newValue.split("->");
+            String[] currentParts = aggValue.split("->");
+            if (newParts.length == 2 && currentParts.length == 2) {
+                long newCount = Long.parseLong(newParts[1]);
+                long currentCount = Long.parseLong(currentParts[1]);
+                return (newCount > currentCount) ? newValue : aggValue;
+            }
+            return aggValue;
+        });
 
-    // //12. Get the routes with the least occupancy per transport type
-    // // routeTransportTypeTable.toStream()
-    // //     .peek((k, v) -> System.out.println("Route Transport Type: " + k + " -> " + v))
-    // //     .to(requirementsTopics[11], Produced.with(Serdes.String(), Serdes.String()));
-    
-    // // Associar a taxa de ocupação ao tipo de transporte em uma String
-    // KTable<String, String> occupancyRateWithTransportType = occupancyRatePerRoute
-    //     .join(routeTransportTypeTable,
+    highestPassengersTransportType
+        .toStream()
+        .map((key, value) -> KeyValue.pair("highest_passengers_transport", value.split("->")[0]))
+        .peek((key, value) -> System.out.println("Transport Type with Highest Passengers: " + value))
+        .mapValues((k, v) -> new ResultsReq11(v).toString())
+        .to(requirementsTopics[10]);
+
+
+    // //12. Get the routes with the least occupancy per transport type ex  Route with Least Occupancy: Bus -> 1 -> 0.00 | Route with Least Occupancy: Train -> 2 -> 0.00
+    // // Associar o tipo de transporte ao id da rota
+    // KTable<String, String> routeTransportTypeTable = routeStream
+    //     .selectKey((key, route) -> String.valueOf(route.getId())) // Usa o routeId como chave
+    //     .mapValues(Route::getTransportType) // Extrai o tipo de transporte
+    //     .toTable(Materialized.with(Serdes.String(), Serdes.String())); // Converte para KTable
+
+    // // Associar a taxa de ocupação com o tipo de transporte
+    // KTable<String, String> occupancyWithTransportType = occupancyRatePerRoute
+    //     .join(routeTransportTypeTable, 
     //         (occupancyRate, transportType) -> String.format("%s -> %.2f", transportType, occupancyRate * 100)
     //     );
 
-    // // Encontrar a rota com menor taxa de ocupação por tipo de transporte
-    // KTable<String, String> leastOccupancyPerTransportType = occupancyRateWithTransportType
-    //     .toStream()
-    //     .groupBy(
-    //         (routeId, transportWithRate) -> transportWithRate.split(" -> ")[0], // Agrupar por tipo de transporte
-    //         Grouped.with(Serdes.String(), Serdes.String())
-    //     )
-    //     .reduce(
-    //         (aggValue, newValue) -> {
-    //             // Extrai as taxas de ocupação
-    //             double aggRate = Double.parseDouble(aggValue.split(" -> ")[1]);
-    //             double newRate = Double.parseDouble(newValue.split(" -> ")[1]);
-    //             return (aggRate <= newRate) ? aggValue : newValue; // Menor taxa de ocupação
+    // // Encontrar a rota menos ocupada por tipo de transporte
+    // KTable<String, String> leastOccupiedRoutePerTransportType = occupancyWithTransportType.toStream()
+    //     .map((key, value) -> KeyValue.pair("least_occupied_route", key + "->" + value)) // Formata como "tipo,ocupação"
+    //     .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
+    //     .reduce((aggValue, newValue) -> {
+    //         // Separa o tipo, id da rota e a ocupação
+    //         String[] newParts = newValue.split(" -> ");
+    //         String[] currentParts = aggValue.split(" -> ");
+    //         // Se a nova ocupação for menor, retorna o novo valor
+    //         if (newParts.length == 2 && currentParts.length == 2) {
+    //             double newRate = Double.parseDouble(newParts[1]);
+    //             double currentRate = Double.parseDouble(currentParts[1]);
+    //             return (newRate < currentRate) ? newValue : aggValue;
     //         }
-    //     );
+    //         return aggValue; // Retorna o valor atual em caso de erro
+    //     });
+
+    // // Separar a chave e valor para formatar os dados finais
+    // KStream<String, String> finalStream = leastOccupiedRoutePerTransportType
+    //     .toStream()
+    //     .map((key, value) -> {
+    //         // Separar tipo, id da rota e ocupação
+    //         String[] parts = value.split(" -> ");
+    //         if (parts.length == 2) {
+    //             String transportType = parts[0];
+    //             String[] routeParts = parts[1].split(" ");
+    //             if (routeParts.length == 2) {
+    //                 String routeId = routeParts[0];
+    //                 String occupancyRate = routeParts[1];
+    //                 return KeyValue.pair(transportType, routeId + " -> " + occupancyRate);
+    //             }
+    //         }
+    //         return KeyValue.pair("unknown_transport", "0 -> 0.00"); // Retorna um valor padrão em caso de erro
+    //     });
 
     // // Publicar o resultado no tópico de saída
-    // leastOccupancyPerTransportType.toStream()
-    //     .peek((key, value) -> System.out.println("Least Occupancy per Transport Type: " + value));
+    // finalStream
+    //     .peek((key, value) -> System.out.println("Route with Least Occupancy: " + key + " -> " + value))
+    //     .to(requirementsTopics[11]);
+
         
     
-    // // 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
-    // // Contagem de passageiros por tipo de transporte em uma janela de 1 minuto
-    // KTable<Windowed<String>, Long> passengersPerTransport = tripStream
-    // .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
-    // .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(1))) // Define janela de 1 minuto
-    // .count(); // Conta o número de passageiros por transporte
-
-    // // Encontrar o tipo de transporte mais utilizado
-    // KTable<String, String> mostUsedTransportType = passengersPerTransport.toStream()
-    // .map((key, value) -> KeyValue.pair("most_used_transport", key.key() + "->" + value)) // Formata como "tipo,contagem"
-    // .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
-    // .reduce((aggValue, newValue) -> {
-    //     // Separa o tipo e a contagem
-    //     String[] newParts = newValue.split("->");
-    //     String[] currentParts = aggValue.split("->");
-    //     // Se a nova contagem for maior, retorna o novo valor
-    //     if (newParts.length == 2 && currentParts.length == 2) {
-    //         int newCount = Integer.parseInt(newParts[1]);
-    //         int currentCount = Integer.parseInt(currentParts[1]);
-    //         return (newCount > currentCount) ? newValue : aggValue;
-    //     }
-    //     return aggValue; // Retorna o valor atual em caso de erro
-    // });
-
-    // // Publicar o tipo de transporte mais usado
-    // mostUsedTransportType.toStream()
-    // .peek((key, value) -> System.out.println("Most Used Transport Type: " + value))
-    // .mapValues((k, v) -> new ResultsReq13(v).toString())
-    // .to(requirementsTopics[12]);
-
-
-    //14. Get the least occupied transport type in the last hour (use a tumbling time window)
-    //Passengers per transport type in a 1-minute window
+    // 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
+    // Contagem de passageiros por tipo de transporte em uma janela de 1 minuto
     KTable<Windowed<String>, Long> passengersPerTransport = tripStream
     .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
     .windowedBy(TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(1))) // Define janela de 1 minuto
     .count(); // Conta o número de passageiros por transporte
-    
+
+    // Encontrar o tipo de transporte mais utilizado
+    KTable<String, String> mostUsedTransportType = passengersPerTransport.toStream()
+    .map((key, value) -> KeyValue.pair("most_used_transport", key.key() + "->" + value)) // Formata como "tipo,contagem"
+    .groupByKey(Grouped.with(Serdes.String(), Serdes.String())) // Agrupa todos sob a mesma chave
+    .reduce((aggValue, newValue) -> {
+        // Separa o tipo e a contagem
+        String[] newParts = newValue.split("->");
+        String[] currentParts = aggValue.split("->");
+        // Se a nova contagem for maior, retorna o novo valor
+        if (newParts.length == 2 && currentParts.length == 2) {
+            int newCount = Integer.parseInt(newParts[1]);
+            int currentCount = Integer.parseInt(currentParts[1]);
+            return (newCount > currentCount) ? newValue : aggValue;
+        }
+        return aggValue; // Retorna o valor atual em caso de erro
+    });
+
+    // Publicar o tipo de transporte mais usado
+    mostUsedTransportType.toStream()
+    .peek((key, value) -> System.out.println("Most Used Transport Type: " + value))
+    .mapValues((k, v) -> new ResultsReq13(v).toString())
+    .to(requirementsTopics[12]);
+
+
+    //14. Get the least occupied transport type in the last hour (use a tumbling time window)
+
     // Somar capacidade por tipo de transporte na janela de 1 minuto
     KTable<Windowed<String>, Long> capacityPerTransport = routeStream
     .groupBy((key, value) -> value.getTransportType()) // Agrupa por tipo de transporte
