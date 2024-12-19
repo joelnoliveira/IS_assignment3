@@ -119,17 +119,17 @@ public class KafkaStreamsProcessor {
             .mapValues((k, v) -> new ResultsReq07(v).toString())
             .to(requirementsTopics[6]);
         
-    //     //8 Get total seating available for all routes
-    //     KTable<String, Integer> totalCapacity = routeStream
-    //         .mapValues(route -> route.getCapacity()) // Extrai o campo capacity
-    //         .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), Serdes.Integer())) // Agrupa com chave constante
-    //         .reduce(Integer::sum); // Soma acumulada
+        //8 Get total seating available for all routes
+        KTable<String, Integer> totalCapacity = routeStream
+            .mapValues(route -> route.getCapacity()) // Extrai o campo capacity
+            .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), Serdes.Integer())) // Agrupa com chave constante
+            .reduce(Integer::sum); // Soma acumulada
 
-    //     totalCapacity
-    //         .toStream()
-    //         .peek((k, v) -> System.out.println("Total Seating Capacity: " + v))
-    //         .mapValues((k, v) -> new ResultsReq08(v+0L).toString())
-    //         .to(requirementsTopics[7]);
+        totalCapacity
+            .toStream()
+            .peek((k, v) -> System.out.println("Total Seating Capacity: " + v))
+            .mapValues((k, v) -> new ResultsReq08(v+0L).toString())
+            .to(requirementsTopics[7]);
 
     //     // 9 Get the total occupancy percentage (all passengers / all seats)
     //     totalPassengers
