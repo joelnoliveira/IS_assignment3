@@ -108,16 +108,16 @@ public class KafkaStreamsProcessor {
     
 
         
-    //     // 7. Sum all the passengers across all trips (just one result)
-    //     KTable<String, Long> totalPassengers = tripStream
-    //         .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), tripSerde)) // Agrupa por uma chave constante
-    //         .count(); // Contagem acumulada
+        // 7. Sum all the passengers across all trips (just one result)
+        KTable<String, Long> totalPassengers = tripStream
+            .groupBy((key, value) -> "all", Grouped.with(Serdes.String(), tripSerde)) // Agrupa por uma chave constante
+            .count(); // Contagem acumulada
 
-    //     totalPassengers
-    //         .toStream()
-    //         .peek((k, v) -> System.out.println("Total Passengers: " + v))
-    //         .mapValues((k, v) -> new ResultsReq07(v).toString())
-    //         .to(requirementsTopics[6]);
+        totalPassengers
+            .toStream()
+            .peek((k, v) -> System.out.println("Total Passengers: " + v))
+            .mapValues((k, v) -> new ResultsReq07(v).toString())
+            .to(requirementsTopics[6]);
         
     //     //8 Get total seating available for all routes
     //     KTable<String, Integer> totalCapacity = routeStream
