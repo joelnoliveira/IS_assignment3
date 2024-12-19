@@ -6,7 +6,7 @@
       "connection.url": "jdbc:postgresql://database:5432/project3",
       "connection.user": "postgres",
       "connection.password": "My01pass",
-      "topics": "results_req04,results_req05,results_req06,results_req07,results_req08,results_req09,results_req10,results_req11,results_req12,results_req13,results_req14,results_req15,results_req16",
+      "topics": "results_routes,results_trips,results_req04,results_req05,results_req06,results_req07,results_req08,results_req09,results_req10,results_req11,results_req12,results_req13,results_req14,results_req15,results_req16",
       "table.name.format": "${topic}",
       "auto.create": "true",
       "auto.evolve": "true",

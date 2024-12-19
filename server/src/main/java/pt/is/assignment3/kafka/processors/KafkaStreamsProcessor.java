@@ -35,7 +35,7 @@ public class KafkaStreamsProcessor {
     public static void main(String[] args) throws InterruptedException, IOException {
         String routesTopic = "routes";
         String tripsTopic = "trips";
-        String [] requirementsTopics = {"results_req01","results_req02","results_req03","results_req04","results_req05","results_req06","results_req07","results_req08","results_req09","results_req10","results_req11","results_req12","results_req13","results_req14","results_req15","results_req16"};
+        String [] requirementsTopics = {"results_routes","results_trips","none","results_req04","results_req05","results_req06","results_req07","results_req08","results_req09","results_req10","results_req11","results_req12","results_req13","results_req14","results_req15","results_req16"};
       
         java.util.Properties props = new Properties();
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "kafka-streams-app");
@@ -51,6 +51,16 @@ public class KafkaStreamsProcessor {
         StreamsBuilder builder = new StreamsBuilder();
         KStream<String, Route> routeStream = builder.stream(routesTopic, Consumed.with(Serdes.String(), routeSerde));
         KStream<String, Trip> tripStream = builder.stream(tripsTopic, Consumed.with(Serdes.String(), tripSerde));
+
+        // send the routes to the results_routes topic for debugging
+        routeStream
+            .mapValues((route) -> route.myToString())
+            .to(requirementsTopics[0]);
+
+        // send the trips to the results_trips topic for debugging
+        tripStream
+            .mapValues((trip) -> trip.myToString())
+            .to(requirementsTopics[1]);
         
         // 4. Calculate passengers per route: count the number of trips for each routeId
         KTable<String, Long> passengersPerRoute = tripStream
