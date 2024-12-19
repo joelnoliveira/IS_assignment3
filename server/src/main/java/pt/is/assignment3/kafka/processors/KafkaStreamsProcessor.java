@@ -131,16 +131,16 @@ public class KafkaStreamsProcessor {
             .mapValues((k, v) -> new ResultsReq08(v+0L).toString())
             .to(requirementsTopics[7]);
 
-    //     // 9 Get the total occupancy percentage (all passengers / all seats)
-    //     totalPassengers
-    //         .join(
-    //             totalCapacity,
-    //             (allPassengers, allCapacity) -> ((allCapacity > 0 && allPassengers > 0) ? ((double) allPassengers / allCapacity)* 100 : 0.0)
-    //         )
-    //         .toStream()
-    //         .peek((key, value) -> System.out.printf("Total Occupancy Percentage: %.2f %%\n", value))
-    //         .mapValues((k, v) -> new ResultsReq09(v).toString())
-    //         .to(requirementsTopics[8]);
+        // 9 Get the total occupancy percentage (all passengers / all seats)
+        totalPassengers
+            .join(
+                totalCapacity,
+                (allPassengers, allCapacity) -> ((allCapacity > 0 && allPassengers > 0) ? ((double) allPassengers / allCapacity)* 100 : 0.0)
+            )
+            .toStream()
+            .peek((key, value) -> System.out.printf("Total Occupancy Percentage: %.2f %%\n", value))
+            .mapValues((k, v) -> new ResultsReq09(v).toString())
+            .to(requirementsTopics[8]);
     
     // //10. Get	the	average	number	of	passengers	per	transport	type
     // // Criar uma tabela associando cada routeId ao tipo de transporte
