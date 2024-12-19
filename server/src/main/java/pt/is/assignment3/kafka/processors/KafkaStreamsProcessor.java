@@ -347,7 +347,7 @@ public class KafkaStreamsProcessor {
         leastOccupiedTransportType.toStream()
         .peek((key, value) -> System.out.println("Least Occupied Transport Type: " + value))
         .mapValues((k, v) -> new ResultsReq14(v).toString())
-        .to(requirementsTopics[13]);
+        .to(requirementsTopics[10]);
 
 
         //15 Get the name of the route operator with the most occupancy. Include the value of occupancy
@@ -407,7 +407,7 @@ public class KafkaStreamsProcessor {
         finalStream
         .peek((key, value) -> System.out.println("Operator with Highest Occupancy: " + key + " -> " + value))
         .mapValues((k, v) -> new ResultsReq15(k, Double.parseDouble(v)).toString())
-        .to(requirementsTopics[10]);
+        .to(requirementsTopics[11]);
 
         // 16. Get the name of the passenger with the most trips
         // Passenger id -> Number of trips
@@ -450,7 +450,7 @@ public class KafkaStreamsProcessor {
         passengerWithMostTrips.toStream()
             .peek((key, value) -> System.out.println("Passenger with Most Trips: " + value))
             .mapValues((k, v) -> new ResultsReq16(v).toString())
-            .to(requirementsTopics[11]);
+            .to(requirementsTopics[12]);
 
 
         KafkaStreams streams = new KafkaStreams(builder.build(), props);
