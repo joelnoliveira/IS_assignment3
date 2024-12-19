@@ -22,7 +22,7 @@ public class TripsCenario {
 
         trip = new Trip();
         trip.setId(1L);
-        trip.setRouteId(1L);
+        trip.setRouteId(4L);
         trip.setPassengerId(1L);
         trip.setPassengerName("Passenger 1");
         trip.setTransportType("Bus");
@@ -60,8 +60,8 @@ public class TripsCenario {
         trip = new Trip();
         trip.setId(5L);
         trip.setRouteId(3L);
-        trip.setPassengerId(5L);
-        trip.setPassengerName("Passenger 5");
+        trip.setPassengerId(1L);
+        trip.setPassengerName("Passenger 1");
         trip.setTransportType("Train");
 
 
