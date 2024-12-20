@@ -94,6 +94,15 @@ public class TripsCenario {
 
         trips.add(trip);
 
+        trip = new Trip();
+        trip.setId(9L);
+        trip.setRouteId(3L);
+        trip.setPassengerId(7L);
+        trip.setPassengerName("Passenger 7");
+        trip.setTransportType("Train");
+
+        trips.add(trip);
+
         return trips;
     }
 
