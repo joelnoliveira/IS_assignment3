@@ -31,12 +31,13 @@
 ```mvn exec:java -Dexec.mainClass="pt.is.assignment3.kafka.processors.KafkaStreamsProcessor"```
 
 ### Testing
-- To check the output of a topic (example)run:```kafka-console-consumer.sh --bootstrap-server broker1:9092 \
---topic resultstopic \
+- To check the output of a topic (example)run:\
+```kafka-console-consumer.sh --bootstrap-server broker1:9092 \
+--topic results_req10 \
 --property print.key=true \
 --property print.value=true \
 --property key.deserializer=org.apache.kafka.common.serialization.StringDeserializer \
---property value.deserializer=org.apache.kafka.common.serialization.LongDeserializer```
+--property value.deserializer=org.apache.kafka.common.serialization.StringDeserializer --from-beginning```
 - To descibe a topic run: ```kafka-topics.sh --describe --bootstrap-server broker1:9092 --topic resultstopic``` 
 ## Recommended VSCode Extensions
 

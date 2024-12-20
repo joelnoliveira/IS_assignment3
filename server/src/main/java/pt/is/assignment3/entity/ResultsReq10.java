@@ -23,7 +23,7 @@ public class ResultsReq10 { // average number of passengers per transport type
                 "optional": false
             },
             "payload": {
-                "transport_type": %s,
+                "transport_type": "%s",
                 "average_passengers": %.2f
             }
         }

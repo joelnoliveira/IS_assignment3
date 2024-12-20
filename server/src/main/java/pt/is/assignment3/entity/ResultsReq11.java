@@ -21,7 +21,7 @@ public class ResultsReq11 { // The transport type with the highest number of pas
                 "optional": false
             },
             "payload": {
-                "transport_type": %s
+                "transport_type": "%s"
             }
         }
         """, transportType);

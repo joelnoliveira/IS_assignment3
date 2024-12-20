@@ -21,7 +21,7 @@ public class ResultsReq13 { // the most used transport type in the last hour
                 "optional": false
             },
             "payload": {
-                "transport_type": %s
+                "transport_type": "%s"
             }
         }
         """, transportType);
