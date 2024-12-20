@@ -109,6 +109,6 @@ public class RoutesCenario {
             //give feedback
             System.out.printf("Sent to topic %s: %s", outputTopic, route);
         }
-        System.exit(0);
+        producer.close();
     }
 }
