@@ -72,7 +72,6 @@ public class TripsCenario {
 
     public static void main(String[] args) throws Exception {
         
-        Long topicId = 0L;
         String outputTopic = "trips";
         
         Properties props = new Properties();

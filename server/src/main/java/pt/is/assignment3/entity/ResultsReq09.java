@@ -1,13 +1,23 @@
 package pt.is.assignment3.entity;
 
-import lombok.AllArgsConstructor;
+import org.springframework.data.annotation.Id;
+
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data @NoArgsConstructor @AllArgsConstructor// Lombok annotations to create getters, setters and constructor (boilerplate code)
+@Data @NoArgsConstructor // Lombok annotations to create getters, setters and constructor (boilerplate code)
 public class ResultsReq09 {  // total occupancy percentage
 
+    @Id
+    @Setter(AccessLevel.NONE) // prevent the ID from being changed, since its comes from the database
+    private String key;
     private double totalOccupancyPercentage;
+
+    public ResultsReq09(double totalOccupancyPercentage) {
+        this.totalOccupancyPercentage = totalOccupancyPercentage;
+    }
 
     @Override
     public String toString() {

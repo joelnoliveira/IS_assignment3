@@ -8,8 +8,6 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import pt.is.assignment3.entity.Route;
 
 public class RoutesProducer {
@@ -59,7 +57,6 @@ public class RoutesProducer {
         return route;
     }
 
-    // TODO do constant version for teacher scnerio testing
     public static void main(String[] args) throws Exception {
         Long routeId = 0L;
         String outputTopic = "routes";

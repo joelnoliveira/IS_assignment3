@@ -1,6 +1,5 @@
 package pt.is.assignment3.kafka.producers;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -67,7 +66,6 @@ public class RoutesCenario {
     }
 
     public static void main(String[] args) throws Exception {
-        Long routeId = 0L;
         String outputTopic = "routes";
         
         Properties props = new Properties();

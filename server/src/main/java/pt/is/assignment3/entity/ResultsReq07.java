@@ -1,13 +1,23 @@
 package pt.is.assignment3.entity;
 
-import lombok.AllArgsConstructor;
+import org.springframework.data.annotation.Id;
+
+import lombok.AccessLevel;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data @NoArgsConstructor @AllArgsConstructor// Lombok annotations to create getters, setters and constructor (boilerplate code)
+@Data @NoArgsConstructor // Lombok annotations to create getters, setters and constructor (boilerplate code)
 public class ResultsReq07 { // total passengers (all routes summed)
 
+    @Id
+    @Setter(AccessLevel.NONE) // prevent the ID from being changed, since its comes from the database
+    private String key;
     private long totalPassengers;
+
+    public ResultsReq07(long totalPassengers) {
+        this.totalPassengers = totalPassengers;
+    }
 
     @Override
     public String toString() { // postgres schema

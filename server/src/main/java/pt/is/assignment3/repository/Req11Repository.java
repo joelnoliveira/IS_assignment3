@@ -7,6 +7,6 @@ import org.springframework.stereotype.Repository;
 import pt.is.assignment3.entity.ResultsReq11;
 
 @Repository
-public interface Req11Repository extends ReactiveCrudRepository<ResultsReq11, Long> {
+public interface Req11Repository extends ReactiveCrudRepository<ResultsReq11, String> {
     
 }
