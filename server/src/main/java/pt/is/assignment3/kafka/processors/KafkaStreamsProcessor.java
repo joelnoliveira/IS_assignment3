@@ -171,10 +171,6 @@ public class KafkaStreamsProcessor {
         .groupByKey(Grouped.with(Serdes.String(), Serdes.Long()))
         .count();
 
-        // Log das Rotas Únicas por Tipo de Transporte
-        // routeCountPerTransportType.toStream()
-        // .peek((k,v) -> System.out.println("Count Unique Routes per Transport Type: " + k + " -> " + v));
-
         // Fazer o join para calcular a média de passageiros por tipo de transporte
         KTable<String, Double> averagePassengersPerTransportType = routeCountPerTransportType
             .join(totalPassengersPerTransportType, 
@@ -295,20 +291,28 @@ public class KafkaStreamsProcessor {
             Materialized.with(Serdes.String(), Serdes.Long())
         );
 
-        // capacityPerTransport.toStream()
-        // .peek((key, value) -> System.out.println("Capacity per Transport: " + key.key() + " -> " + value));
 
-        // Calcular a taxa de ocupação por tipo de transporte
+        // Capacity per Transport: Taxi -> 4
+        // Capacity per Transport: Teleportation -> 51
+        // Capacity per Transport: Train -> 200
+        // Capacity per Transport: Bus -> 104
+        
+        // Passengers per Transport: Taxi -> 1
+        // Passengers per Transport: Teleportation -> 1
+        // Passengers per Transport: Train -> 4
+        // Passengers per Transport: Bus -> 3
+
+        // output
+        // Taxi -> 0.25
+        // Teleportation ->  0.0196078431372549
+        // Train -> 0.02
+        // Bus -> 0.028846153846153848
+       // Calcular a taxa de ocupação por tipo de transporte na janela de 1 minuto
         KTable<Windowed<String>, Double> occupancyRatePerTransport = passengersPerTransport
-        .join(capacityPerTransport, (passengers, capacity) -> {
-            if (capacity == 0) {
-                return 0.0; // Evita divisão por zero
-            }
-            return (double) passengers / capacity; // Calcula a taxa de ocupação
-        });
-
-        // occupancyRatePerTransport.toStream()
-        // .peek((key, value) -> System.out.println("Occupancy Rate per Transport: " + key.key() + " -> " + value));
+        .join(capacityPerTransport, 
+            (passengers, capacity) -> (capacity > 0) ? (double) passengers / capacity : 0.0
+        );
+        
 
         // Encontrar o tipo de transporte menos ocupado
         KTable<String, String> leastOccupiedTransportType = occupancyRatePerTransport.toStream()

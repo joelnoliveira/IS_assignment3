@@ -67,7 +67,7 @@ public class RoutesCenario {
         route.setId(5L);
         route.setOperatorId(51L);
         route.setOperatorName("Operator 51");
-        route.setTransportType("OVNI");
+        route.setTransportType("Teleportation");
         route.setCapacity(51);
         route.setOrigin("GalaxyA");
         route.setDestination("GalaxyB");
