@@ -31,8 +31,7 @@
 ```mvn exec:java -Dexec.mainClass="pt.is.assignment3.kafka.processors.KafkaStreamsProcessor"```
 
 ### Testing
-- To check the output of a topic (example)run:\
-```kafka-console-consumer.sh --bootstrap-server broker1:9092 \
+- To check the output of a topic (example)run:```kafka-console-consumer.sh --bootstrap-server broker1:9092 \
 --topic results_req10 \
 --property print.key=true \
 --property print.value=true \

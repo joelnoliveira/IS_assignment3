@@ -71,7 +71,7 @@ public class KafkaStreamsProcessor {
             .count();
 
         passengersPerRoute.toStream()
-            // .peek((k, v) -> System.out.println("Req4: Passengers per route: " + k + " -> " + v))
+            .peek((k, v) -> System.out.println("Req4: Passengers per route: " + k + " -> " + v))
             .mapValues((routeId, passengerCount) -> new ResultsReq04(Long.parseLong(routeId), passengerCount).toString())
             .to(requirementsTopics[0]);
         
@@ -81,7 +81,7 @@ public class KafkaStreamsProcessor {
             .toTable(Materialized.with(Serdes.String(), Serdes.Integer()));
 
         capacityPerRoute.toStream()
-            // .peek((k, v) -> System.out.println("Req5: Capacity per route: " + k + " -> " + v))
+            .peek((k, v) -> System.out.println("Req5: Capacity per route: " + k + " -> " + v))
             .mapValues((routeId, capacity) -> new ResultsReq05(Long.parseLong(routeId), capacity).toString())
             .to(requirementsTopics[1]);
 
@@ -94,7 +94,7 @@ public class KafkaStreamsProcessor {
         );
 
         occupancyRatePerRoute.toStream()
-            // .peek((key, value) -> System.out.println("Req6: Route Id: " + key + " -> Occupancy Rate: " + value + "%"))
+            .peek((key, value) -> System.out.println("Req6: Route Id: " + key + " -> Occupancy Rate: " + value + "%"))
             .mapValues((routeId, occupancyRate) -> new ResultsReq06(Long.parseLong(routeId), occupancyRate).toString())
             .to(requirementsTopics[2]);
         
@@ -105,7 +105,7 @@ public class KafkaStreamsProcessor {
 
         totalPassengers
             .toStream()
-            // .peek((k, v) -> System.out.println("Req7: Total Passengers: " + v))
+            .peek((k, v) -> System.out.println("Req7: Total Passengers: " + v))
             .mapValues((k, v) -> new ResultsReq07(v).toString())
             .to(requirementsTopics[3]);
         
@@ -117,7 +117,7 @@ public class KafkaStreamsProcessor {
 
         totalCapacity
             .toStream()
-            // .peek((k, v) -> System.out.println("Req8: Total Seating Capacity: " + v))
+            .peek((k, v) -> System.out.println("Req8: Total Seating Capacity: " + v))
             .mapValues((k, v) -> new ResultsReq08(v+0L).toString())
             .to(requirementsTopics[4]);
 
@@ -128,7 +128,7 @@ public class KafkaStreamsProcessor {
                 (allPassengers, allCapacity) -> ((allCapacity > 0 && allPassengers > 0) ? ((double) allPassengers / allCapacity)* 100 : 0.0)
             )
             .toStream()
-            // .peek((key, value) -> System.out.printf("Req9: Total Occupancy Percentage: %.2f %%\n", value))
+            .peek((key, value) -> System.out.printf("Req9: Total Occupancy Percentage: %.2f %%\n", value))
             .mapValues((k, v) -> new ResultsReq09(v).toString())
             .to(requirementsTopics[5]);
     
@@ -185,7 +185,7 @@ public class KafkaStreamsProcessor {
         // Publicar o resultado no tópico final
         averagePassengersPerTransportType
             .toStream()
-            // .peek((transportType, average) -> System.out.println("Req 10: Average Passengers for Transport Type: " + transportType + " -> " + average))
+            .peek((transportType, average) -> System.out.println("Req 10: Average Passengers for Transport Type: " + transportType + " -> " + average))
             .mapValues((k, v) -> new ResultsReq10(k, v).toString())
             .to(requirementsTopics[6]);
 
@@ -210,7 +210,7 @@ public class KafkaStreamsProcessor {
         highestPassengersTransportType
             .toStream()
             .map((key, value) -> KeyValue.pair("highest_passengers_transport", value.split("->")[0]))
-            // .peek((key, value) -> System.out.println("Req11: Transport Type with Highest Passengers: " + value))
+            .peek((key, value) -> System.out.println("Req11: Transport Type with Highest Passengers: " + value))
             .mapValues((k, v) -> new ResultsReq11(v).toString())
             .to(requirementsTopics[7]);
 
@@ -226,7 +226,7 @@ public class KafkaStreamsProcessor {
         KTable<String, String> occupancyRatePerRoutePerTransport = occupancyRatePerRoute
         .join(transportTypePerRoute, (occupancyRate, transportType) -> transportType + "->" + occupancyRate);
 
-        occupancyRatePerRoutePerTransport.toStream()
+        // occupancyRatePerRoutePerTransport.toStream()
         // .peek((key, value) -> System.out.println("Occupancy Rate per Route per Transport: " + key + " -> " + value))
         ;
 
@@ -248,7 +248,7 @@ public class KafkaStreamsProcessor {
         //Least Occupied per Transport: Train -> 3->0.33333333333333337
         //Least Occupied per Transport: Bus -> 4->1.6666666666666667
         leastOccupiedPerTransport.toStream()
-            // .peek((key, value) -> System.out.println("Req12: Least Occupied per Transport: " + value + " -> " + key))
+            .peek((key, value) -> System.out.println("Req12: Least Occupied per Transport: " + value + " -> " + key))
             .mapValues((k, v) -> new ResultsReq12(Long.parseLong(v.split("->")[0]), k).toString())
             .to(requirementsTopics[8]);
         
@@ -279,7 +279,7 @@ public class KafkaStreamsProcessor {
 
         // Publicar o tipo de transporte mais usado
         mostUsedTransportType.toStream()
-        // .peek((key, value) -> System.out.println("Req13: Most Used Transport Type: " + value.split("->")[0]))
+        .peek((key, value) -> System.out.println("Req13: Most Used Transport Type: " + value.split("->")[0]))
         .mapValues((k, v) -> new ResultsReq13(v.split("->")[0]).toString())
         .to(requirementsTopics[9]);
 
@@ -295,8 +295,8 @@ public class KafkaStreamsProcessor {
             Materialized.with(Serdes.String(), Serdes.Long())
         );
 
-        capacityPerTransport.toStream()
-        .peek((key, value) -> System.out.println("Capacity per Transport: " + key.key() + " -> " + value));
+        // capacityPerTransport.toStream()
+        // .peek((key, value) -> System.out.println("Capacity per Transport: " + key.key() + " -> " + value));
 
         // Calcular a taxa de ocupação por tipo de transporte
         KTable<Windowed<String>, Double> occupancyRatePerTransport = passengersPerTransport
@@ -307,8 +307,8 @@ public class KafkaStreamsProcessor {
             return (double) passengers / capacity; // Calcula a taxa de ocupação
         });
 
-        occupancyRatePerTransport.toStream()
-        .peek((key, value) -> System.out.println("Occupancy Rate per Transport: " + key.key() + " -> " + value));
+        // occupancyRatePerTransport.toStream()
+        // .peek((key, value) -> System.out.println("Occupancy Rate per Transport: " + key.key() + " -> " + value));
 
         // Encontrar o tipo de transporte menos ocupado
         KTable<String, String> leastOccupiedTransportType = occupancyRatePerTransport.toStream()
@@ -389,7 +389,7 @@ public class KafkaStreamsProcessor {
 
         // Publicar o resultado no tópico de saída
         finalStream
-        // .peek((key, value) -> System.out.println("Req15: Operator with Highest Occupancy: " + key + " -> " + value))
+        .peek((key, value) -> System.out.println("Req15: Operator with Highest Occupancy: " + key + " -> " + value))
         .mapValues((k, v) -> new ResultsReq15(k, Double.parseDouble(v)).toString())
         .to(requirementsTopics[11]);
 
@@ -432,7 +432,7 @@ public class KafkaStreamsProcessor {
 
         // Publicar o passageiro com mais viagens
         passengerWithMostTrips.toStream()
-            // .peek((key, value) -> System.out.println("Req16: Passenger with Most Trips: " + value))
+            .peek((key, value) -> System.out.println("Req16: Passenger with Most Trips: " + value))
             .mapValues((k, v) -> new ResultsReq16(v.split("->")[0]).toString())
             .to(requirementsTopics[12]);
 
