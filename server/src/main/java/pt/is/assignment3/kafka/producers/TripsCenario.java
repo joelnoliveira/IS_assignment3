@@ -64,7 +64,16 @@ public class TripsCenario {
         trip.setPassengerName("Passenger 1");
         trip.setTransportType("Train");
 
+        trips.add(trip);
 
+        // add trip with a route that doesn't exist
+        trip = new Trip();
+        trip.setId(6L);
+        trip.setRouteId(1501L);
+        trip.setPassengerId(1L);
+        trip.setPassengerName("Passenger 1");
+        trip.setTransportType("Teleportation");
+        
         trips.add(trip);
 
         return trips;

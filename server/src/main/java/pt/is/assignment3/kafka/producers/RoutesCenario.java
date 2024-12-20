@@ -62,6 +62,18 @@ public class RoutesCenario {
 
         routes.add(route);
 
+        // add route with no trip
+        route = new Route();
+        route.setId(5L);
+        route.setOperatorId(51L);
+        route.setOperatorName("Operator 51");
+        route.setTransportType("OVNI");
+        route.setCapacity(51);
+        route.setOrigin("GalaxyA");
+        route.setDestination("GalaxyB");
+
+        routes.add(route);
+
         return routes;
     }
 
