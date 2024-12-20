@@ -279,7 +279,7 @@ public class KafkaStreamsProcessor {
 
         // Publicar o tipo de transporte mais usado
         mostUsedTransportType.toStream()
-        .peek((key, value) -> System.out.println("Req13: Most Used Transport Type: " + value.split("->")[0]))
+        // .peek((key, value) -> System.out.println("Req13: Most Used Transport Type: " + value.split("->")[0]))
         .mapValues((k, v) -> new ResultsReq13(v.split("->")[0]).toString())
         .to(requirementsTopics[9]);
 
@@ -295,6 +295,9 @@ public class KafkaStreamsProcessor {
             Materialized.with(Serdes.String(), Serdes.Long())
         );
 
+        capacityPerTransport.toStream()
+        .peek((key, value) -> System.out.println("Capacity per Transport: " + key.key() + " -> " + value));
+
         // Calcular a taxa de ocupação por tipo de transporte
         KTable<Windowed<String>, Double> occupancyRatePerTransport = passengersPerTransport
         .join(capacityPerTransport, (passengers, capacity) -> {
@@ -303,6 +306,9 @@ public class KafkaStreamsProcessor {
             }
             return (double) passengers / capacity; // Calcula a taxa de ocupação
         });
+
+        occupancyRatePerTransport.toStream()
+        .peek((key, value) -> System.out.println("Occupancy Rate per Transport: " + key.key() + " -> " + value));
 
         // Encontrar o tipo de transporte menos ocupado
         KTable<String, String> leastOccupiedTransportType = occupancyRatePerTransport.toStream()
@@ -321,23 +327,9 @@ public class KafkaStreamsProcessor {
             return aggValue; // Retorna o valor atual em caso de erro
         });
 
-        //Formatar os dados finais
-        KStream<String, String> transportStream = leastOccupiedTransportType.toStream()
-        .map((key, value) -> {
-            // Separar tipo e ocupação
-            String[] parts = value.split("->");
-            if (parts.length == 2) {
-                String transportType = parts[0];
-                String occupancyRate = parts[1];
-                return KeyValue.pair(transportType, occupancyRate);
-            }
-            return KeyValue.pair("unknown_transport", "0.00"); // Retorna um valor padrão em caso de erro
-        });
-        
-
         // Publicar o tipo de transporte menos ocupado
         leastOccupiedTransportType.toStream()
-        // .peek((key, value) -> System.out.println("Req14: Least Occupied Transport Type: " + value.split("->")[0]))
+        .peek((key, value) -> System.out.println("Req14: Least Occupied Transport Type: " + value.split("->")[0]))
         .mapValues((k, v) -> new ResultsReq14(v.split("->")[0]).toString())
         .to(requirementsTopics[10]);
 
@@ -352,7 +344,7 @@ public class KafkaStreamsProcessor {
         // Associar a taxa de ocupação com o operador da rota
         KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
         .join(routeOperatorTable, 
-            (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate)
+            (occupancyRate, operator) -> String.format("%s -> %f", operator, occupancyRate)
         );
 
         // occupancyWithOperator.toStream()
