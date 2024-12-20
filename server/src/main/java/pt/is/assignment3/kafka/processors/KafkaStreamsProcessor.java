@@ -22,7 +22,6 @@ import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.Stores;
-import org.apache.logging.log4j.core.appender.routing.Routes;
 import org.apache.kafka.streams.KeyValue;
 
 import pt.is.assignment3.entity.*;
@@ -195,7 +194,7 @@ public class KafkaStreamsProcessor {
         KTable<String, String> highestPassengersTransportType = totalPassengersPerTransportType
             .toStream()
             .map((key, value) -> KeyValue.pair("highest_passengers", key + "->" + value))
-            .peek((key, value) -> System.out.println("Transport Type: "  + value))
+            // .peek((key, value) -> System.out.println("Transport Type: "  + value))
             .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
             .reduce((aggValue, newValue) -> {
                 String[] newParts = newValue.split("->");
@@ -219,17 +218,23 @@ public class KafkaStreamsProcessor {
         //12. Get the routes with the least occupancy per transport type      
         // route id 1 -> transport type taxi
         KTable<String, String> transportTypePerRoute = tripStream
-            .groupBy((key, value) -> String.valueOf(value.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
-            .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), tripSerde))
-            .mapValues(trip -> trip.getTransportType());
+            // .groupBy((key, value) -> String.valueOf(value.getRouteId()), Grouped.with(Serdes.String(), tripSerde))
+            // .reduce((value1, value2) -> value2, Materialized.with(Serdes.String(), tripSerde))
+            .mapValues(trip -> trip.getTransportType()).toTable();
         
         // transport type -> route id ->  occupancy rate join do occupancyrateperroute com transporttypeperroute
         KTable<String, String> occupancyRatePerRoutePerTransport = occupancyRatePerRoute
         .join(transportTypePerRoute, (occupancyRate, transportType) -> transportType + "->" + occupancyRate);
 
+        // occupancyRatePerRoutePerTransport.toStream()
+        // .peek((key, value) -> System.out.println("Occupancy Rate per Route per Transport: " + key + " -> " + value))
+        // ;
+
         // escolher o menor valor de ocupação por transporte agrupando por transporte
         KTable<String, String> leastOccupiedPerTransport = occupancyRatePerRoutePerTransport.toStream()
-        .map((key, value) -> KeyValue.pair(value.split("->")[0], key + "->" + value.split("->")[1]))
+        // .peek((key, value) -> System.out.println("Before Occupied per Transport: " + key + " -> " + value))
+        // .map((key, value) -> KeyValue.pair(value.split("->")[0], key + "->" + value.split("->")[1]))
+        // .peek((key, value) -> System.out.println("After Occupied per Transport: " + key + " -> " + value))
         .groupByKey(Grouped.with(Serdes.String(), Serdes.String()))
         .reduce((aggValue, newValue) -> {
             String[] newParts = newValue.split("->");
@@ -241,10 +246,13 @@ public class KafkaStreamsProcessor {
             }
             return aggValue;
         });
+        
         //Least Occupied per Transport: Train -> 3->0.33333333333333337
         //Least Occupied per Transport: Bus -> 4->1.6666666666666667
         leastOccupiedPerTransport.toStream()
-            .peek((key, value) -> System.out.println("Least Occupied per Transport: " + key + " -> " + value));
+            .peek((key, value) -> System.out.println("Req12: Least Occupied per Transport: " + key + " -> " + value))
+            .mapValues((k, v) -> new ResultsReq12(Long.parseLong(k), v.split("->")[0]).toString())
+            .to(requirementsTopics[8]);
         
 
         // 13. Obter o tipo de transporte mais usado na última hora (janela de 1 hora)
