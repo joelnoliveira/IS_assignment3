@@ -114,6 +114,7 @@ public class TripsCenario {
             //give feedback
             System.out.printf("Sent to topic %s: %s\n", outputTopic, trip);
         }
+        System.exit(0);
     
     }
 }

@@ -56,11 +56,13 @@ public class KafkaStreamsProcessor {
 
         // send the routes to the results_routes topic for debugging
         routeStream
+            // .selectKey((key, route) -> String.valueOf(route.getId()))
             .mapValues((route) -> route.myToString())
             .to(debugTopics[0]);
 
         // send the trips to the results_trips topic for debugging
         tripStream
+            .selectKey((key, trip) -> String.valueOf(trip.getId()))
             .mapValues((trip) -> trip.myToString())
             .to(debugTopics[1]);
         
@@ -131,13 +133,11 @@ public class KafkaStreamsProcessor {
             .mapValues((k, v) -> new ResultsReq09(v).toString())
             .to(requirementsTopics[5]);
     
-    //    // 10. Get the average number of passengers per transport type (sum of passengers per transport type / count routes per transport type)
+        // 10. Get the average number of passengers per transport type (sum of passengers per transport type / count routes per transport type)
         // Criar uma KTable com o número total de passageiros por tipo de transporte
         KTable<String, Long> totalPassengersPerTransportType = tripStream
         .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde)) // Agrupa por tipo de transporte
         .count(); // Conta o número total de passageiros por tipo de transporte
-
-
 
         totalPassengersPerTransportType 
         .toStream()
@@ -155,26 +155,26 @@ public class KafkaStreamsProcessor {
         // Taxi -> Count Unique Routes: 1
 
        // Passo 1: Cria uma chave composta de transportType e routeId para identificar rotas únicas
-KTable<String, Long> uniqueTransportRoutes = tripStream
-.selectKey((key, trip) -> trip.getTransportType() + "-" + trip.getRouteId()) // Chave composta
-.groupByKey(Grouped.with(Serdes.String(), tripSerde))
-.count();
+        KTable<String, Long> uniqueTransportRoutes = tripStream
+        .selectKey((key, trip) -> trip.getTransportType() + "-" + trip.getRouteId()) // Chave composta
+        .groupByKey(Grouped.with(Serdes.String(), tripSerde))
+        .count();
 
-// Passo 2: Extrai apenas o tipo de transporte e atribui um valor de 1 para cada rota única
-KStream<String, Long> transportTypeStream = uniqueTransportRoutes.toStream()
-.map((compositeKey, count) -> {
-    String transportType = compositeKey.split("-")[0]; // Obtém o tipo de transporte
-    return new KeyValue<>(transportType, 1L); // Atribui 1 para cada rota única
-});
+        // Passo 2: Extrai apenas o tipo de transporte e atribui um valor de 1 para cada rota única
+        KStream<String, Long> transportTypeStream = uniqueTransportRoutes.toStream()
+        .map((compositeKey, count) -> {
+            String transportType = compositeKey.split("-")[0]; // Obtém o tipo de transporte
+            return new KeyValue<>(transportType, 1L); // Atribui 1 para cada rota única
+        });
 
-// Passo 3: Agrupa novamente por tipo de transporte e conta o número de rotas únicas
-KTable<String, Long> routeCountPerTransportType = transportTypeStream
-.groupByKey(Grouped.with(Serdes.String(), Serdes.Long()))
-.count();
+        // Passo 3: Agrupa novamente por tipo de transporte e conta o número de rotas únicas
+        KTable<String, Long> routeCountPerTransportType = transportTypeStream
+        .groupByKey(Grouped.with(Serdes.String(), Serdes.Long()))
+        .count();
 
-// Log das Rotas Únicas por Tipo de Transporte
-routeCountPerTransportType.toStream()
-.peek((k,v) -> System.out.println("Count Unique Routes per Transport Type: " + k + " -> " + v));
+        // Log das Rotas Únicas por Tipo de Transporte
+        routeCountPerTransportType.toStream()
+        .peek((k,v) -> System.out.println("Count Unique Routes per Transport Type: " + k + " -> " + v));
 
         // Fazer o join para calcular a média de passageiros por tipo de transporte
         KTable<String, Double> averagePassengersPerTransportType = totalPassengersPerTransportType
@@ -189,32 +189,6 @@ routeCountPerTransportType.toStream()
             .peek((transportType, average) -> System.out.println("Average Passengers for Transport Type: " + transportType + " -> " + average))
             .mapValues((k, v) -> new ResultsReq10(k, v).toString())
             .to(requirementsTopics[6]);
-    //     // Criar uma KTable com o número de rotas por tipo de transporte
-    //     KTable<String, Long> routeCountPerTransportType = tripStream
-    //     .groupBy((key, trip) -> trip.getTransportType(), Grouped.with(Serdes.String(), tripSerde)) // Agrupa por tipo de transporte
-    //     .aggregate(
-    //         () -> 0L, // Valor inicial
-    //         (key, trip, aggregate) -> aggregate + 1, // Incrementa 1 para cada rota encontrada
-    //         Materialized.with(Serdes.String(), Serdes.Long()) // Materializa a tabela
-    //     );
-
-    //     routeCountPerTransportType
-    //     .toStream()
-    //     .peek((k,v) -> System.out.println("Route Count per Transport Type: " + k + " -> " + v));
-
-    //     // Fazer o join para calcular a média de passageiros por tipo de transporte
-    //     KTable<String, Double> averagePassengersPerTransportType = totalPassengersPerTransportType
-    //     .join(routeCountPerTransportType, 
-    //         (totalPassenger, routeCount) -> (double) totalPassenger / routeCount, // Calcula a média
-    //         Materialized.with(Serdes.String(), Serdes.Double()) // Materializa com Serdes apropriados
-    //     );
-
-    //     // Publicar o resultado no tópico final
-    //     averagePassengersPerTransportType
-    //     .toStream()
-    //     .peek((transportType, average) -> System.out.println("Average Passengers for Transport Type: " + transportType + " -> " + average))
-    //     .mapValues((k, v) -> new ResultsReq10(k, v).toString())
-    //     .to(requirementsTopics[6]);
 
         // 11. Get the transport type with the highest number of served passengers (only one if there is a tie)
         // Pegar o tipo de transporte com o maior número de passageiros

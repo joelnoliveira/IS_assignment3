@@ -76,7 +76,5 @@ public class TripsProducer {
             //give feedback
             System.out.printf("Sent to topic %s: %s\n", outputTopic, trip);
         }
-
-        // TODO: consider adding a shutdown hook to close the producer
     }
 }

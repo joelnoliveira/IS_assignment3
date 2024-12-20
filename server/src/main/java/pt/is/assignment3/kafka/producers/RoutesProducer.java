@@ -106,7 +106,6 @@ public class RoutesProducer {
 
         producer.close();
         System.out.println("Combination limit reached. Exiting...");
+        System.exit(0);
     }
-
-    // TODO maybe add a shutdown hook to properly close the producer
 }
