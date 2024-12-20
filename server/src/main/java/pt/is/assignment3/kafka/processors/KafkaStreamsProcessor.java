@@ -248,7 +248,7 @@ public class KafkaStreamsProcessor {
         //Least Occupied per Transport: Train -> 3->0.33333333333333337
         //Least Occupied per Transport: Bus -> 4->1.6666666666666667
         leastOccupiedPerTransport.toStream()
-            .peek((key, value) -> System.out.println("Req12: Least Occupied per Transport: " + value + " -> " + key))
+            // .peek((key, value) -> System.out.println("Req12: Least Occupied per Transport: " + value + " -> " + key))
             .mapValues((k, v) -> new ResultsReq12(Long.parseLong(v.split("->")[0]), k).toString())
             .to(requirementsTopics[8]);
         
@@ -279,8 +279,8 @@ public class KafkaStreamsProcessor {
 
         // Publicar o tipo de transporte mais usado
         mostUsedTransportType.toStream()
-        // .peek((key, value) -> System.out.println("Req13: Most Used Transport Type: " + value))
-        .mapValues((k, v) -> new ResultsReq13(v).toString())
+        // .peek((key, value) -> System.out.println("Req13: Most Used Transport Type: " + value.split("->")[0]))
+        .mapValues((k, v) -> new ResultsReq13(v.split("->")[0]).toString())
         .to(requirementsTopics[9]);
 
 

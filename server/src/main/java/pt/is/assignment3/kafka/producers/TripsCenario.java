@@ -73,7 +73,25 @@ public class TripsCenario {
         trip.setPassengerId(1L);
         trip.setPassengerName("Passenger 1");
         trip.setTransportType("Teleportation");
-        
+
+        trips.add(trip);
+
+        trip = new Trip();
+        trip.setId(7L);
+        trip.setRouteId(3L);
+        trip.setPassengerId(7L);
+        trip.setPassengerName("Passenger 7");
+        trip.setTransportType("Train");
+
+        trips.add(trip);
+
+        trip = new Trip();
+        trip.setId(8L);
+        trip.setRouteId(3L);
+        trip.setPassengerId(7L);
+        trip.setPassengerName("Passenger 7");
+        trip.setTransportType("Train");
+
         trips.add(trip);
 
         return trips;
