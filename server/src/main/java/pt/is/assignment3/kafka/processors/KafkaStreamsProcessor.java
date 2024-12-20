@@ -354,7 +354,7 @@ public class KafkaStreamsProcessor {
         // Associar a taxa de ocupação com o operador da rota
         KTable<String, String> occupancyWithOperator = occupancyRatePerRoute
         .join(routeOperatorTable, 
-            (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate * 100)
+            (occupancyRate, operator) -> String.format("%s -> %.2f", operator, occupancyRate)
         );
 
         // occupancyWithOperator.toStream()
@@ -443,7 +443,7 @@ public class KafkaStreamsProcessor {
         // Publicar o passageiro com mais viagens
         passengerWithMostTrips.toStream()
             .peek((key, value) -> System.out.println("Req16: Passenger with Most Trips: " + value))
-            .mapValues((k, v) -> new ResultsReq16(v).toString())
+            .mapValues((k, v) -> new ResultsReq16(v.split("->")[0]).toString())
             .to(requirementsTopics[12]);
 
 
